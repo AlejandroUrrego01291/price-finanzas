@@ -6,7 +6,7 @@ import { Providers } from './providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Price - Finanzas Personales',
+  title: 'Mis Finanzas Personales',
   description: 'Administra tus ingresos y gastos',
 }
 
