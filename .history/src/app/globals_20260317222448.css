@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 249, 250, 251;
+}
+
+body {
+  color: rgb(17, 24, 39);
+  /* Gris más oscuro para mejor contraste */
+  background: rgb(var(--background-rgb));
+}
+
+/* Clases de utilidad para textos más visibles */
+.text-title {
+  @apply text-gray-900 font-bold;
+  /* Títulos en negro casi puro */
+}
+
+.text-subtitle {
+  @apply text-gray-800 font-semibold;
+  /* Subtítulos en gris muy oscuro */
+}
+
+.text-body {
+  @apply text-gray-700;
+  /* Texto normal bien visible */
+}
+
+.text-muted {
+  @apply text-gray-600;
+  /* Texto secundario pero aún legible */
+}

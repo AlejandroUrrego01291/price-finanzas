@@ -1,0 +1,7 @@
+require('dotenv').config({ path: '.env.local' })
+console.log('=== DIAGNÓSTICO DE VARIABLES DE ENTORNO ===')
+console.log('POSTGRES_URL:', process.env.POSTGRES_URL ? '✅ Definida' : '❌ No definida')
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✅ Definida' : '❌ No definida')
+console.log('POSTGRES_URL_NON_POOLING:', process.env.POSTGRES_URL_NON_POOLING ? '✅ Definida' : '❌ No definida')
+console.log('\nPrimeros 50 caracteres de POSTGRES_URL:')
+console.log(process.env.POSTGRES_URL?.substring(0, 50) + '...')
