@@ -105,7 +105,7 @@ export default async function DashboardPage() {
 
                 <main className="max-w-7xl mx-auto py-12 px-4">
                     <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-12 text-center">
-                        <h2 className="text-3xl font-bold text-gray-800 mb-4">¡Mis finanzas personales!</h2>
+                        <h2 className="text-3xl font-bold text-gray-800 mb-4">¡Bienvenido a Price!</h2>
                         <p className="text-gray-600 mb-8">Comienza registrando tus primeras transacciones para ver los gráficos</p>
                         <div className="flex justify-center space-x-4">
                             <Link href="/transacciones" className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:opacity-90 transition">
