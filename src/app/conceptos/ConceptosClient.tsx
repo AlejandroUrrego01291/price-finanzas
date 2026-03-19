@@ -30,15 +30,22 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
         fixedDate: ''
     })
     const [mostrarIngresos, setMostrarIngresos] = useState(true)
+    const [nuevaCategoria, setNuevaCategoria] = useState('')
+    const [mostrarInputNuevaCategoria, setMostrarInputNuevaCategoria] = useState(false)
 
     const tipos = ['INGRESO', 'GASTO']
     const subtipos = ['FIJO', 'VARIABLE', 'CASUAL']
-    const categoriasPorDefecto = [
-        'Empleo', 'Hogar', 'Telecomunicaciones', 'Educación',
-        'Alimentación', 'Deudas', 'Ahorro', 'Servicios Públicos',
-        'Independiente', 'No planeados', 'Transporte', 'Salud',
-        'Obligaciones', 'Metas' // Nuevas categorías
+
+    // Categorías específicas por tipo
+    const categoriasIngreso = ['Empleo', 'Comisiones', 'Independiente']
+    const categoriasGasto = [
+        'Hogar', 'Telecomunicaciones', 'Educación', 'Alimentación',
+        'Deudas', 'Ahorro', 'Servicios Públicos', 'No planeados',
+        'Transporte', 'Salud', 'Obligaciones', 'Metas'
     ]
+
+    // Determinar qué categorías mostrar según el tipo seleccionado
+    const categoriasDisponibles = formData.type === 'INGRESO' ? categoriasIngreso : categoriasGasto
 
     // Separar conceptos por tipo
     const ingresos = conceptos.filter(c => c.type === 'INGRESO')
@@ -46,6 +53,11 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        // Determinar la categoría final (puede ser la seleccionada o la nueva)
+        const categoriaFinal = mostrarInputNuevaCategoria && nuevaCategoria
+            ? nuevaCategoria
+            : formData.category
 
         try {
             const response = await fetch('/api/conceptos', {
@@ -55,7 +67,7 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
                     id: editandoId,
                     type: formData.type,
                     name: formData.name,
-                    category: formData.category || null,
+                    category: categoriaFinal || null,
                     subType: formData.subType,
                     value: formData.value ? Number(formData.value) : null,
                     fixedDate: formData.fixedDate ? Number(formData.fixedDate) : null
@@ -71,6 +83,8 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
                     value: '',
                     fixedDate: ''
                 })
+                setNuevaCategoria('')
+                setMostrarInputNuevaCategoria(false)
                 setEditandoId(null)
 
                 const res = await fetch('/api/conceptos')
@@ -93,6 +107,8 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
             value: concepto.value?.toString() || '',
             fixedDate: concepto.fixedDate?.toString() || ''
         })
+        setNuevaCategoria('')
+        setMostrarInputNuevaCategoria(false)
     }
 
     const handleDelete = async (id: string) => {
@@ -123,11 +139,10 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-            {/* Navbar moderno con efecto glassmorphism - MISMO ESTILO QUE EL DASHBOARD */}
+            {/* Navbar */}
             <nav className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-20 items-center">
-                        {/* Logo con gradiente */}
                         <div className="flex items-center">
                             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                                 Mis finanzas
@@ -136,8 +151,6 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
                                 Administrar Conceptos
                             </span>
                         </div>
-
-                        {/* Botón de volver con el mismo estilo de los botones de navegación */}
                         <div className="flex items-center">
                             <button
                                 onClick={() => router.push('/dashboard')}
@@ -163,7 +176,11 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
                                 <label className="block text-body text-sm font-medium mb-1">Tipo</label>
                                 <select
                                     value={formData.type}
-                                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, type: e.target.value, category: '' })
+                                        setNuevaCategoria('')
+                                        setMostrarInputNuevaCategoria(false)
+                                    }}
                                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
                                     required
                                 >
@@ -186,20 +203,56 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
                             </div>
 
                             <div>
-                                <label className="block text-body text-sm font-medium mb-1">Categoría</label>
-                                <input
-                                    type="text"
-                                    value={formData.category}
-                                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                                    placeholder="Ej: Empleo, Hogar..."
-                                    list="categorias"
-                                />
-                                <datalist id="categorias">
-                                    {categoriasPorDefecto.map(cat => (
-                                        <option key={cat} value={cat} />
-                                    ))}
-                                </datalist>
+                                <label className="block text-body text-sm font-medium mb-1">
+                                    Categoría
+                                </label>
+                                {!mostrarInputNuevaCategoria ? (
+                                    <div className="flex space-x-2">
+                                        <select
+                                            value={formData.category}
+                                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                                        >
+                                            <option value="">Selecciona una categoría</option>
+                                            {categoriasDisponibles.map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            type="button"
+                                            onClick={() => setMostrarInputNuevaCategoria(true)}
+                                            className="mt-1 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm whitespace-nowrap"
+                                        >
+                                            + Nueva
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex space-x-2">
+                                        <input
+                                            type="text"
+                                            value={nuevaCategoria}
+                                            onChange={(e) => setNuevaCategoria(e.target.value)}
+                                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                                            placeholder="Nueva categoría"
+                                            autoFocus
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setMostrarInputNuevaCategoria(false)
+                                                setNuevaCategoria('')
+                                            }}
+                                            className="mt-1 px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                )}
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {formData.type === 'INGRESO'
+                                        ? 'Categorías para ingresos: Empleo, Comisiones, Independiente'
+                                        : 'Selecciona una categoría de gasto o crea una nueva'}
+                                </p>
                             </div>
 
                             <div>
@@ -252,6 +305,8 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
                                     onClick={() => {
                                         setEditandoId(null)
                                         setFormData({ type: 'GASTO', name: '', category: '', subType: 'FIJO', value: '', fixedDate: '' })
+                                        setNuevaCategoria('')
+                                        setMostrarInputNuevaCategoria(false)
                                     }}
                                     className="px-4 py-2 border border-gray-300 rounded-md text-body hover:bg-gray-50"
                                 >
