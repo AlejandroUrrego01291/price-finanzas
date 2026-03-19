@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 
 // ============================================
-// TIPOS (lo que faltaba)
+// TIPOS
 // ============================================
 type Concepto = {
     id: string
@@ -48,6 +48,7 @@ export default function TransaccionesClient({
     const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0])
     const [mostrarFormNuevoConcepto, setMostrarFormNuevoConcepto] = useState(false)
     const [nuevoConcepto, setNuevoConcepto] = useState('')
+    const [editandoId, setEditandoId] = useState<string | null>(null)
 
     const [transacciones, setTransacciones] = useState<Transaccion[]>(transaccionesIniciales)
     const [totalIngresos, setTotalIngresos] = useState(totalIngresosInicial)
@@ -118,10 +119,14 @@ export default function TransaccionesClient({
         }
 
         try {
-            const response = await fetch('/api/transacciones', {
-                method: 'POST',
+            const url = editandoId ? `/api/transacciones?id=${editandoId}` : '/api/transacciones'
+            const method = editandoId ? 'PUT' : 'POST'
+
+            const response = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    id: editandoId,
                     type: tipo,
                     conceptId: conceptoFinalId,
                     conceptName: conceptoFinalNombre,
@@ -133,16 +138,43 @@ export default function TransaccionesClient({
             })
 
             if (response.ok) {
-                const nuevaTransaccion = await response.json()
+                const transaccionActualizada = await response.json()
 
-                setTransacciones([nuevaTransaccion, ...transacciones])
+                if (editandoId) {
+                    // Actualizar la transacción existente
+                    setTransacciones(transacciones.map(t =>
+                        t.id === editandoId ? transaccionActualizada : t
+                    ))
 
-                if (tipo === 'INGRESO') {
-                    setTotalIngresos(totalIngresos + Number(valor))
+                    // Recalcular totales
+                    const nuevaTransacciones = transacciones.map(t =>
+                        t.id === editandoId ? transaccionActualizada : t
+                    )
+
+                    const nuevosIngresos = nuevaTransacciones
+                        .filter(t => t.type === 'INGRESO')
+                        .reduce((sum, t) => sum + t.value, 0)
+
+                    const nuevosGastos = nuevaTransacciones
+                        .filter(t => t.type === 'GASTO')
+                        .reduce((sum, t) => sum + t.value, 0)
+
+                    setTotalIngresos(nuevosIngresos)
+                    setTotalGastos(nuevosGastos)
+
+                    setEditandoId(null)
                 } else {
-                    setTotalGastos(totalGastos + Number(valor))
+                    // Agregar nueva transacción
+                    setTransacciones([transaccionActualizada, ...transacciones])
+
+                    if (tipo === 'INGRESO') {
+                        setTotalIngresos(totalIngresos + Number(valor))
+                    } else {
+                        setTotalGastos(totalGastos + Number(valor))
+                    }
                 }
 
+                // Limpiar formulario
                 setConceptoId('')
                 setValor('')
                 setNuevoConcepto('')
@@ -154,6 +186,64 @@ export default function TransaccionesClient({
         } catch (error) {
             console.error('Error:', error)
         }
+    }
+
+    const handleEdit = (transaccion: Transaccion) => {
+        setEditandoId(transaccion.id)
+        setTipo(transaccion.type as 'INGRESO' | 'GASTO')
+        setConceptoId(transaccion.concept?.id || '')
+        setValor(transaccion.value.toString())
+        setFecha(transaccion.date)
+        setMostrarFormNuevoConcepto(false)
+
+        // Scroll suave al formulario
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('¿Estás seguro de eliminar esta transacción?')) return
+
+        try {
+            const response = await fetch(`/api/transacciones?id=${id}`, {
+                method: 'DELETE'
+            })
+
+            if (response.ok) {
+                // Obtener la transacción a eliminar para ajustar totales
+                const transaccionEliminada = transacciones.find(t => t.id === id)
+
+                if (transaccionEliminada) {
+                    if (transaccionEliminada.type === 'INGRESO') {
+                        setTotalIngresos(totalIngresos - transaccionEliminada.value)
+                    } else {
+                        setTotalGastos(totalGastos - transaccionEliminada.value)
+                    }
+                }
+
+                setTransacciones(transacciones.filter(t => t.id !== id))
+
+                // Si estábamos editando esta transacción, cancelar edición
+                if (editandoId === id) {
+                    setEditandoId(null)
+                    setConceptoId('')
+                    setValor('')
+                    setFecha(new Date().toISOString().split('T')[0])
+                }
+
+                router.refresh()
+            }
+        } catch (error) {
+            console.error('Error:', error)
+        }
+    }
+
+    const handleCancelEdit = () => {
+        setEditandoId(null)
+        setConceptoId('')
+        setValor('')
+        setFecha(new Date().toISOString().split('T')[0])
+        setMostrarFormNuevoConcepto(false)
+        setNuevoConcepto('')
     }
 
     const formatearMoneda = (valor: number) => {
@@ -194,7 +284,9 @@ export default function TransaccionesClient({
             <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                 {/* Formulario */}
                 <div className="bg-white shadow rounded-lg p-6 mb-6">
-                    <h2 className="text-subtitle text-lg mb-4">Nueva Transacción</h2>
+                    <h2 className="text-subtitle text-lg mb-4">
+                        {editandoId ? 'Editar Transacción' : 'Nueva Transacción'}
+                    </h2>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             {/* Selector de Tipo */}
@@ -301,13 +393,22 @@ export default function TransaccionesClient({
                                 />
                             </div>
 
-                            {/* Botón Guardar */}
-                            <div className="flex items-end">
+                            {/* Botones Guardar/Cancelar */}
+                            <div className="flex items-end space-x-2">
+                                {editandoId && (
+                                    <button
+                                        type="button"
+                                        onClick={handleCancelEdit}
+                                        className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+                                    >
+                                        Cancelar
+                                    </button>
+                                )}
                                 <button
                                     type="submit"
                                     className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                                 >
-                                    Guardar
+                                    {editandoId ? 'Actualizar' : 'Guardar'}
                                 </button>
                             </div>
                         </div>
@@ -326,7 +427,7 @@ export default function TransaccionesClient({
                     </div>
                 </div>
 
-                {/* Listados separados */}
+                {/* Listados separados con acciones */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Ingresos */}
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -338,16 +439,32 @@ export default function TransaccionesClient({
                         </div>
                         <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
                             {ingresos.map((transaccion) => (
-                                <div key={transaccion.id} className="px-6 py-4 flex justify-between items-center hover:bg-green-50 transition-colors duration-200">
-                                    <div>
+                                <div key={transaccion.id} className="px-6 py-4 flex justify-between items-center hover:bg-green-50 transition-colors duration-200 group">
+                                    <div className="flex-1">
                                         <p className="text-sm font-medium text-gray-900">{transaccion.conceptName}</p>
                                         <p className="text-xs text-gray-500">
                                             {new Date(transaccion.date).toLocaleDateString('es-CO')}
                                         </p>
                                     </div>
-                                    <p className="text-sm font-bold text-[#10B981] bg-green-100 px-3 py-1 rounded-full">
-                                        {formatearMoneda(transaccion.value)}
-                                    </p>
+                                    <div className="flex items-center space-x-2">
+                                        <p className="text-sm font-bold text-[#10B981] bg-green-100 px-3 py-1 rounded-full">
+                                            {formatearMoneda(transaccion.value)}
+                                        </p>
+                                        <button
+                                            onClick={() => handleEdit(transaccion)}
+                                            className="text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            title="Editar"
+                                        >
+                                            ✏️
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(transaccion.id)}
+                                            className="text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            title="Eliminar"
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                             {ingresos.length === 0 && (
@@ -366,16 +483,32 @@ export default function TransaccionesClient({
                         </div>
                         <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
                             {gastos.map((transaccion) => (
-                                <div key={transaccion.id} className="px-6 py-4 flex justify-between items-center hover:bg-red-50 transition-colors duration-200">
-                                    <div>
+                                <div key={transaccion.id} className="px-6 py-4 flex justify-between items-center hover:bg-red-50 transition-colors duration-200 group">
+                                    <div className="flex-1">
                                         <p className="text-sm font-medium text-gray-900">{transaccion.conceptName}</p>
                                         <p className="text-xs text-gray-500">
                                             {new Date(transaccion.date).toLocaleDateString('es-CO')}
                                         </p>
                                     </div>
-                                    <p className="text-sm font-bold text-[#EF4444] bg-red-100 px-3 py-1 rounded-full">
-                                        {formatearMoneda(transaccion.value)}
-                                    </p>
+                                    <div className="flex items-center space-x-2">
+                                        <p className="text-sm font-bold text-[#EF4444] bg-red-100 px-3 py-1 rounded-full">
+                                            {formatearMoneda(transaccion.value)}
+                                        </p>
+                                        <button
+                                            onClick={() => handleEdit(transaccion)}
+                                            className="text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            title="Editar"
+                                        >
+                                            ✏️
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(transaccion.id)}
+                                            className="text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            title="Eliminar"
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                             {gastos.length === 0 && (
