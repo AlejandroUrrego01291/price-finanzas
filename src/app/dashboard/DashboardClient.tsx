@@ -31,8 +31,8 @@ type Props = {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FF6B6B', '#6B66FF']
 
-// Componente de botón de navegación reutilizable
-const NavButton = ({ href, icon, text, color }: { href: string; icon: string; text: string; color: string }) => {
+// Componente de botón de navegación (escritorio)
+const NavButton = ({ href, icon, text, color, onClick }: { href: string; icon: string; text: string; color: string; onClick?: () => void }) => {
     const colorClasses = {
         blue: 'hover:bg-blue-50 hover:text-blue-600 border-blue-200',
         green: 'hover:bg-green-50 hover:text-green-600 border-green-200',
@@ -44,10 +44,35 @@ const NavButton = ({ href, icon, text, color }: { href: string; icon: string; te
     return (
         <Link
             href={href}
+            onClick={onClick}
             className={`px-4 py-2 text-gray-700 font-medium rounded-full ${colorClasses[color as keyof typeof colorClasses]} transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-md flex items-center space-x-2 border border-transparent hover:border-current`}
         >
             <span className="text-lg">{icon}</span>
             <span>{text}</span>
+        </Link>
+    )
+}
+
+// Componente de botón para menú móvil
+const MobileNavButton = ({ href, icon, text, color, onClick }: { href: string; icon: string; text: string; color: string; onClick: () => void }) => {
+    const colorClasses = {
+        blue: 'hover:bg-blue-50 hover:text-blue-600',
+        green: 'hover:bg-green-50 hover:text-green-600',
+        red: 'hover:bg-red-50 hover:text-red-600',
+        yellow: 'hover:bg-yellow-50 hover:text-yellow-600',
+        purple: 'hover:bg-purple-50 hover:text-purple-600',
+    }
+
+    return (
+        <Link
+            href={href}
+            onClick={onClick}
+            className={`block px-4 py-3 text-gray-700 font-medium ${colorClasses[color as keyof typeof colorClasses]} transition-colors duration-200 border-b border-gray-100 last:border-0`}
+        >
+            <div className="flex items-center space-x-3">
+                <span className="text-xl">{icon}</span>
+                <span>{text}</span>
+            </div>
         </Link>
     )
 }
@@ -58,6 +83,12 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
         new Date().toISOString().split('T')[0]
     )
     const [categoriaExpandida, setCategoriaExpandida] = useState<string | null>(null)
+    const [menuAbierto, setMenuAbierto] = useState(false)
+
+    // Cerrar menú al seleccionar una opción
+    const handleMobileNavClick = () => {
+        setMenuAbierto(false)
+    }
 
     // Filtrar transacciones desde la fecha seleccionada hacia atrás
     const transaccionesFiltradas = useMemo(() => {
@@ -213,15 +244,14 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
             <nav className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-20 items-center">
+                        {/* Logo */}
                         <div className="flex items-center">
-                            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                                 Mis finanzas
                             </h1>
-                            <span className="ml-3 text-sm font-medium text-gray-600 hidden md:inline-block">
-                                Dashboard
-                            </span>
                         </div>
 
+                        {/* Menú de escritorio */}
                         <div className="hidden md:flex items-center space-x-2">
                             <NavButton href="/transacciones" icon="💰" text="Transacciones" color="blue" />
                             <NavButton href="/conceptos" icon="📁" text="Conceptos" color="green" />
@@ -230,19 +260,61 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                             <NavButton href="/predicciones" icon="🔮" text="Predicciones" color="purple" />
                         </div>
 
-                        <div className="flex items-center">
-                            <Link
-                                href="/api/auth/signout"
-                                className="px-5 py-2.5 text-sm font-medium text-red-600 hover:text-white border-2 border-red-600 rounded-full hover:bg-red-600 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
+                        {/* Botones de escritorio (cierre sesión) y menú hamburguesa */}
+                        <div className="flex items-center space-x-2">
+                            {/* Cerrar sesión (visible en desktop) */}
+                            <div className="hidden md:block">
+                                <Link
+                                    href="/api/auth/signout"
+                                    className="px-5 py-2.5 text-sm font-medium text-red-600 hover:text-white border-2 border-red-600 rounded-full hover:bg-red-600 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
+                                >
+                                    <span>🚪</span>
+                                    <span>Salir</span>
+                                </Link>
+                            </div>
+
+                            {/* Botón menú hamburguesa (solo móvil) */}
+                            <button
+                                onClick={() => setMenuAbierto(!menuAbierto)}
+                                className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
                             >
-                                <span>🚪</span>
-                                <span className="hidden md:inline">Cerrar sesión</span>
-                            </Link>
+                                <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    {menuAbierto ? (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    ) : (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                    )}
+                                </svg>
+                            </button>
                         </div>
                     </div>
+
+                    {/* Menú móvil desplegable */}
+                    {menuAbierto && (
+                        <div className="md:hidden absolute left-0 right-0 bg-white/95 backdrop-blur-md shadow-lg border-t border-gray-200 py-2 z-50">
+                            <div className="max-w-7xl mx-auto px-4">
+                                <MobileNavButton href="/transacciones" icon="💰" text="Transacciones" color="blue" onClick={handleMobileNavClick} />
+                                <MobileNavButton href="/conceptos" icon="📁" text="Conceptos" color="green" onClick={handleMobileNavClick} />
+                                <MobileNavButton href="/deudas" icon="💳" text="Deudas" color="red" onClick={handleMobileNavClick} />
+                                <MobileNavButton href="/ahorros" icon="🐷" text="Ahorros" color="yellow" onClick={handleMobileNavClick} />
+                                <MobileNavButton href="/predicciones" icon="🔮" text="Predicciones" color="purple" onClick={handleMobileNavClick} />
+                                <div className="px-4 py-3 border-t border-gray-100 mt-2">
+                                    <Link
+                                        href="/api/auth/signout"
+                                        onClick={handleMobileNavClick}
+                                        className="flex items-center space-x-3 text-red-600 font-medium"
+                                    >
+                                        <span className="text-xl">🚪</span>
+                                        <span>Cerrar sesión</span>
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </nav>
 
+            {/* Resto del contenido (igual que antes) */}
             <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
                 {/* Selector de fecha */}
                 <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between bg-white rounded-2xl shadow-md p-6">
@@ -251,39 +323,38 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                     </h2>
                     <div className="flex items-center space-x-3">
                         <label htmlFor="fecha" className="text-gray-700 font-medium">
-                            📅 Mostrar desde:
+                            📅 Desde:
                         </label>
                         <input
                             type="date"
                             id="fecha"
                             value={fechaFiltro}
                             onChange={(e) => setFechaFiltro(e.target.value)}
-                            className="w-64 px-4 py-2.5 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700 font-medium"
+                            className="w-48 md:w-64 px-4 py-2.5 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700 font-medium"
                         />
                     </div>
                 </div>
 
                 {/* Tarjetas de resumen */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    {/* Ingresos */}
                     <div className="bg-gradient-to-br from-[#10B981] to-[#059669] rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-transform duration-300">
-                        <p className="text-white/80 text-sm font-medium uppercase tracking-wider">INGRESOS</p>
-                        <p className="text-3xl font-bold text-white mt-2">{formatearMoneda(totales.ingresos)}</p>
-                        <p className="mt-4 text-white/60 text-sm">
-                            {ingresosConDetalle.length} transacciones
-                        </p>
+                        <p className="text-white/80 text-sm font-medium uppercase">INGRESOS</p>
+                        <p className="text-2xl md:text-3xl font-bold text-white mt-2">{formatearMoneda(totales.ingresos)}</p>
+                        <p className="mt-4 text-white/60 text-sm">{ingresosConDetalle.length} transacciones</p>
                     </div>
 
+                    {/* Gastos */}
                     <div className="bg-gradient-to-br from-[#EF4444] to-[#DC2626] rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-transform duration-300">
-                        <p className="text-white/80 text-sm font-medium uppercase tracking-wider">GASTOS</p>
-                        <p className="text-3xl font-bold text-white mt-2">{formatearMoneda(totales.gastos)}</p>
-                        <p className="mt-4 text-white/60 text-sm">
-                            {transaccionesFiltradas.filter(t => t.type === 'GASTO').length} transacciones
-                        </p>
+                        <p className="text-white/80 text-sm font-medium uppercase">GASTOS</p>
+                        <p className="text-2xl md:text-3xl font-bold text-white mt-2">{formatearMoneda(totales.gastos)}</p>
+                        <p className="mt-4 text-white/60 text-sm">{transaccionesFiltradas.filter(t => t.type === 'GASTO').length} transacciones</p>
                     </div>
 
-                    <div className={`bg-gradient-to-br from-[#3B82F6] to-[#2563EB] rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-transform duration-300`}>
-                        <p className="text-white/80 text-sm font-medium uppercase tracking-wider">BALANCE</p>
-                        <p className="text-3xl font-bold text-white mt-2">{formatearMoneda(totales.balance)}</p>
+                    {/* Balance */}
+                    <div className="bg-gradient-to-br from-[#3B82F6] to-[#2563EB] rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-transform duration-300">
+                        <p className="text-white/80 text-sm font-medium uppercase">BALANCE</p>
+                        <p className="text-2xl md:text-3xl font-bold text-white mt-2">{formatearMoneda(totales.balance)}</p>
                         <div className="mt-4 text-white/60 text-sm">
                             {totales.balance >= 0 ? '✅ Saludable' : '⚠️ Atención'}
                         </div>
@@ -291,69 +362,56 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                 </div>
 
                 {/* Evolución mensual */}
-                <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+                <div className="bg-white rounded-2xl shadow-xl p-4 md:p-8 mb-8 overflow-x-auto">
                     <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
                         <span className="w-3 h-3 bg-blue-500 rounded-full mr-3"></span>
-                        Evolución Mensual (últimos 6 meses)
+                        Evolución Mensual
                     </h3>
-                    <ResponsiveContainer width="100%" height={350}>
-                        <LineChart data={evolucionMensual} margin={{ top: 20, right: 30, left: 80, bottom: 20 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                            <XAxis dataKey="mes" tick={{ fill: '#6B7280', fontSize: 12 }} />
-                            <YAxis
-                                tickFormatter={(value) => formatearMoneda(value)}
-                                tick={{ fill: '#6B7280', fontSize: 12 }}
-                                width={100}
-                            />
-                            <Tooltip
-                                formatter={(value) => formatearMoneda(Number(value))}
-                                contentStyle={{
-                                    backgroundColor: 'white',
-                                    border: 'none',
-                                    borderRadius: '12px',
-                                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
-                                    padding: '12px'
-                                }}
-                            />
-                            <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                            <Line
-                                type="monotone"
-                                dataKey="ingresos"
-                                stroke="#10B981"
-                                name="Ingresos"
-                                strokeWidth={3}
-                                dot={{ r: 6, fill: '#10B981', strokeWidth: 2, stroke: 'white' }}
-                                activeDot={{ r: 8, fill: '#10B981' }}
-                            />
-                            <Line
-                                type="monotone"
-                                dataKey="gastos"
-                                stroke="#EF4444"
-                                name="Gastos"
-                                strokeWidth={3}
-                                dot={{ r: 6, fill: '#EF4444', strokeWidth: 2, stroke: 'white' }}
-                                activeDot={{ r: 8, fill: '#EF4444' }}
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
+                    <div className="h-[300px] md:h-[350px] min-w-[600px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={evolucionMensual} margin={{ top: 20, right: 30, left: 60, bottom: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                <XAxis dataKey="mes" tick={{ fill: '#6B7280', fontSize: 12 }} />
+                                <YAxis
+                                    tickFormatter={(value) => formatearMoneda(value)}
+                                    tick={{ fill: '#6B7280', fontSize: 12 }}
+                                    width={80}
+                                />
+                                <Tooltip
+                                    formatter={(value) => formatearMoneda(Number(value))}
+                                    contentStyle={{
+                                        backgroundColor: 'white',
+                                        border: 'none',
+                                        borderRadius: '12px',
+                                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
+                                        padding: '12px'
+                                    }}
+                                />
+                                <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                                <Line type="monotone" dataKey="ingresos" stroke="#10B981" name="Ingresos" strokeWidth={3} />
+                                <Line type="monotone" dataKey="gastos" stroke="#EF4444" name="Gastos" strokeWidth={3} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
                 {/* Gráficos de resumen */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <div className="bg-white rounded-2xl shadow-xl p-8">
+                    {/* Barras */}
+                    <div className="bg-white rounded-2xl shadow-xl p-4 md:p-8 overflow-x-auto">
                         <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
                             <span className="w-3 h-3 bg-green-500 rounded-full mr-3"></span>
                             Ingresos vs Gastos
                         </h3>
-                        <div className="h-80">
+                        <div className="h-[300px] min-w-[400px]">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={datosBarra} margin={{ top: 20, right: 30, left: 80, bottom: 20 }}>
+                                <BarChart data={datosBarra} margin={{ top: 20, right: 30, left: 60, bottom: 20 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                     <XAxis dataKey="name" tick={{ fill: '#6B7280', fontSize: 12 }} />
                                     <YAxis
                                         tickFormatter={(value) => formatearMoneda(value)}
                                         tick={{ fill: '#6B7280', fontSize: 12 }}
-                                        width={100}
+                                        width={80}
                                     />
                                     <Tooltip
                                         formatter={(value) => formatearMoneda(Number(value))}
@@ -375,12 +433,13 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-2xl shadow-xl p-8">
+                    {/* Pastel */}
+                    <div className="bg-white rounded-2xl shadow-xl p-4 md:p-8 overflow-x-auto">
                         <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
                             <span className="w-3 h-3 bg-purple-500 rounded-full mr-3"></span>
                             Gastos por Categoría
                         </h3>
-                        <div className="h-80">
+                        <div className="h-[300px] min-w-[400px]">
                             {datosGastosPorCategoria.length > 0 ? (
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart margin={{ top: 20, right: 30, left: 30, bottom: 20 }}>
@@ -389,8 +448,8 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                             cx="50%"
                                             cy="50%"
                                             labelLine={true}
-                                            label={(entry) => `${entry.name}`}
-                                            outerRadius={120}
+                                            label={(entry) => entry.name.length > 15 ? `${entry.name.substring(0, 12)}...` : entry.name}
+                                            outerRadius={100}
                                             innerRadius={40}
                                             fill="#8884d8"
                                             dataKey="value"
@@ -421,9 +480,9 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                     </div>
                 </div>
 
-                {/* Detalles con funcionalidad de edición/eliminación */}
+                {/* Detalles */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Detalle de Ingresos */}
+                    {/* Ingresos */}
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                         <div className="px-6 py-5 bg-gradient-to-r from-[#10B981] to-[#059669]">
                             <h3 className="text-lg font-bold text-white flex items-center">
@@ -479,7 +538,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                         </div>
                     </div>
 
-                    {/* Detalle de Gastos por Categoría - Expandible */}
+                    {/* Gastos */}
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                         <div className="px-6 py-5 bg-gradient-to-r from-[#EF4444] to-[#DC2626]">
                             <h3 className="text-lg font-bold text-white flex items-center">
@@ -491,7 +550,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                             {gastosPorCategoriaConDetalle.length > 0 ? (
                                 gastosPorCategoriaConDetalle.map((item) => (
                                     <div key={item.categoria} className="border-b border-gray-100 last:border-0">
-                                        {/* Cabecera de categoría (clickeable) */}
+                                        {/* Cabecera de categoría */}
                                         <div
                                             onClick={() => setCategoriaExpandida(
                                                 categoriaExpandida === item.categoria ? null : item.categoria
@@ -501,7 +560,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                             <div className="flex items-center space-x-2">
                                                 <span className="text-gray-800 font-medium">{item.categoria}</span>
                                                 <span className="text-xs text-gray-400">
-                                                    ({item.transacciones.length} items)
+                                                    ({item.transacciones.length})
                                                 </span>
                                             </div>
                                             <div className="flex items-center space-x-3">
@@ -514,7 +573,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                             </div>
                                         </div>
 
-                                        {/* Detalles de la categoría (expandible) */}
+                                        {/* Detalles expandidos */}
                                         {categoriaExpandida === item.categoria && (
                                             <div className="bg-gray-50 px-6 py-2 space-y-2">
                                                 {item.transacciones.map((transaccion) => (
