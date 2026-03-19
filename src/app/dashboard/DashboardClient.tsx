@@ -31,8 +31,8 @@ type Props = {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FF6B6B', '#6B66FF']
 
-// Componente de botón de navegación (escritorio)
-const NavButton = ({ href, icon, text, color, onClick }: { href: string; icon: string; text: string; color: string; onClick?: () => void }) => {
+// Componente de botón de navegación para escritorio
+const NavButton = ({ href, icon, text, color }: { href: string; icon: string; text: string; color: string }) => {
     const colorClasses = {
         blue: 'hover:bg-blue-50 hover:text-blue-600 border-blue-200',
         green: 'hover:bg-green-50 hover:text-green-600 border-green-200',
@@ -44,35 +44,10 @@ const NavButton = ({ href, icon, text, color, onClick }: { href: string; icon: s
     return (
         <Link
             href={href}
-            onClick={onClick}
             className={`px-4 py-2 text-gray-700 font-medium rounded-full ${colorClasses[color as keyof typeof colorClasses]} transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-md flex items-center space-x-2 border border-transparent hover:border-current`}
         >
             <span className="text-lg">{icon}</span>
             <span>{text}</span>
-        </Link>
-    )
-}
-
-// Componente de botón para menú móvil
-const MobileNavButton = ({ href, icon, text, color, onClick }: { href: string; icon: string; text: string; color: string; onClick: () => void }) => {
-    const colorClasses = {
-        blue: 'hover:bg-blue-50 hover:text-blue-600',
-        green: 'hover:bg-green-50 hover:text-green-600',
-        red: 'hover:bg-red-50 hover:text-red-600',
-        yellow: 'hover:bg-yellow-50 hover:text-yellow-600',
-        purple: 'hover:bg-purple-50 hover:text-purple-600',
-    }
-
-    return (
-        <Link
-            href={href}
-            onClick={onClick}
-            className={`block px-4 py-3 text-gray-700 font-medium ${colorClasses[color as keyof typeof colorClasses]} transition-colors duration-200 border-b border-gray-100 last:border-0`}
-        >
-            <div className="flex items-center space-x-3">
-                <span className="text-xl">{icon}</span>
-                <span>{text}</span>
-            </div>
         </Link>
     )
 }
@@ -84,11 +59,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
     )
     const [categoriaExpandida, setCategoriaExpandida] = useState<string | null>(null)
     const [menuAbierto, setMenuAbierto] = useState(false)
-
-    // Cerrar menú al seleccionar una opción
-    const handleMobileNavClick = () => {
-        setMenuAbierto(false)
-    }
 
     // Filtrar transacciones desde la fecha seleccionada hacia atrás
     const transaccionesFiltradas = useMemo(() => {
@@ -258,25 +228,27 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                             <NavButton href="/deudas" icon="💳" text="Deudas" color="red" />
                             <NavButton href="/ahorros" icon="🐷" text="Ahorros" color="yellow" />
                             <NavButton href="/predicciones" icon="🔮" text="Predicciones" color="purple" />
+                            <Link
+                                href="/api/auth/signout"
+                                className="px-5 py-2.5 text-sm font-medium text-red-600 hover:text-white border-2 border-red-600 rounded-full hover:bg-red-600 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
+                            >
+                                <span>🚪</span>
+                                <span>Salir</span>
+                            </Link>
                         </div>
 
-                        {/* Botones de escritorio (cierre sesión) y menú hamburguesa */}
-                        <div className="flex items-center space-x-2">
-                            {/* Cerrar sesión (visible en desktop) */}
-                            <div className="hidden md:block">
-                                <Link
-                                    href="/api/auth/signout"
-                                    className="px-5 py-2.5 text-sm font-medium text-red-600 hover:text-white border-2 border-red-600 rounded-full hover:bg-red-600 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
-                                >
-                                    <span>🚪</span>
-                                    <span>Salir</span>
-                                </Link>
-                            </div>
-
-                            {/* Botón menú hamburguesa (solo móvil) */}
+                        {/* Botón menú hamburguesa (solo móvil) */}
+                        <div className="md:hidden flex items-center space-x-2">
+                            <Link
+                                href="/api/auth/signout"
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Cerrar sesión"
+                            >
+                                <span className="text-xl">🚪</span>
+                            </Link>
                             <button
                                 onClick={() => setMenuAbierto(!menuAbierto)}
-                                className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                             >
                                 <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     {menuAbierto ? (
@@ -293,28 +265,63 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                     {menuAbierto && (
                         <div className="md:hidden absolute left-0 right-0 bg-white/95 backdrop-blur-md shadow-lg border-t border-gray-200 py-2 z-50">
                             <div className="max-w-7xl mx-auto px-4">
-                                <MobileNavButton href="/transacciones" icon="💰" text="Transacciones" color="blue" onClick={handleMobileNavClick} />
-                                <MobileNavButton href="/conceptos" icon="📁" text="Conceptos" color="green" onClick={handleMobileNavClick} />
-                                <MobileNavButton href="/deudas" icon="💳" text="Deudas" color="red" onClick={handleMobileNavClick} />
-                                <MobileNavButton href="/ahorros" icon="🐷" text="Ahorros" color="yellow" onClick={handleMobileNavClick} />
-                                <MobileNavButton href="/predicciones" icon="🔮" text="Predicciones" color="purple" onClick={handleMobileNavClick} />
-                                <div className="px-4 py-3 border-t border-gray-100 mt-2">
-                                    <Link
-                                        href="/api/auth/signout"
-                                        onClick={handleMobileNavClick}
-                                        className="flex items-center space-x-3 text-red-600 font-medium"
-                                    >
-                                        <span className="text-xl">🚪</span>
-                                        <span>Cerrar sesión</span>
-                                    </Link>
-                                </div>
+                                <Link
+                                    href="/transacciones"
+                                    className="block px-4 py-3 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200 border-b border-gray-100"
+                                    onClick={() => setMenuAbierto(false)}
+                                >
+                                    <div className="flex items-center space-x-3">
+                                        <span className="text-xl">💰</span>
+                                        <span>Transacciones</span>
+                                    </div>
+                                </Link>
+                                <Link
+                                    href="/conceptos"
+                                    className="block px-4 py-3 text-gray-700 font-medium hover:bg-green-50 hover:text-green-600 transition-colors duration-200 border-b border-gray-100"
+                                    onClick={() => setMenuAbierto(false)}
+                                >
+                                    <div className="flex items-center space-x-3">
+                                        <span className="text-xl">📁</span>
+                                        <span>Conceptos</span>
+                                    </div>
+                                </Link>
+                                <Link
+                                    href="/deudas"
+                                    className="block px-4 py-3 text-gray-700 font-medium hover:bg-red-50 hover:text-red-600 transition-colors duration-200 border-b border-gray-100"
+                                    onClick={() => setMenuAbierto(false)}
+                                >
+                                    <div className="flex items-center space-x-3">
+                                        <span className="text-xl">💳</span>
+                                        <span>Deudas</span>
+                                    </div>
+                                </Link>
+                                <Link
+                                    href="/ahorros"
+                                    className="block px-4 py-3 text-gray-700 font-medium hover:bg-yellow-50 hover:text-yellow-600 transition-colors duration-200 border-b border-gray-100"
+                                    onClick={() => setMenuAbierto(false)}
+                                >
+                                    <div className="flex items-center space-x-3">
+                                        <span className="text-xl">🐷</span>
+                                        <span>Ahorros</span>
+                                    </div>
+                                </Link>
+                                <Link
+                                    href="/predicciones"
+                                    className="block px-4 py-3 text-gray-700 font-medium hover:bg-purple-50 hover:text-purple-600 transition-colors duration-200 border-b border-gray-100"
+                                    onClick={() => setMenuAbierto(false)}
+                                >
+                                    <div className="flex items-center space-x-3">
+                                        <span className="text-xl">🔮</span>
+                                        <span>Predicciones</span>
+                                    </div>
+                                </Link>
                             </div>
                         </div>
                     )}
                 </div>
             </nav>
 
-            {/* Resto del contenido (igual que antes) */}
+            {/* Resto del contenido (sin cambios) */}
             <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
                 {/* Selector de fecha */}
                 <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between bg-white rounded-2xl shadow-md p-6">
@@ -337,21 +344,18 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
 
                 {/* Tarjetas de resumen */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    {/* Ingresos */}
                     <div className="bg-gradient-to-br from-[#10B981] to-[#059669] rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-transform duration-300">
                         <p className="text-white/80 text-sm font-medium uppercase">INGRESOS</p>
                         <p className="text-2xl md:text-3xl font-bold text-white mt-2">{formatearMoneda(totales.ingresos)}</p>
                         <p className="mt-4 text-white/60 text-sm">{ingresosConDetalle.length} transacciones</p>
                     </div>
 
-                    {/* Gastos */}
                     <div className="bg-gradient-to-br from-[#EF4444] to-[#DC2626] rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-transform duration-300">
                         <p className="text-white/80 text-sm font-medium uppercase">GASTOS</p>
                         <p className="text-2xl md:text-3xl font-bold text-white mt-2">{formatearMoneda(totales.gastos)}</p>
                         <p className="mt-4 text-white/60 text-sm">{transaccionesFiltradas.filter(t => t.type === 'GASTO').length} transacciones</p>
                     </div>
 
-                    {/* Balance */}
                     <div className="bg-gradient-to-br from-[#3B82F6] to-[#2563EB] rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-transform duration-300">
                         <p className="text-white/80 text-sm font-medium uppercase">BALANCE</p>
                         <p className="text-2xl md:text-3xl font-bold text-white mt-2">{formatearMoneda(totales.balance)}</p>
@@ -397,7 +401,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
 
                 {/* Gráficos de resumen */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    {/* Barras */}
                     <div className="bg-white rounded-2xl shadow-xl p-4 md:p-8 overflow-x-auto">
                         <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
                             <span className="w-3 h-3 bg-green-500 rounded-full mr-3"></span>
@@ -433,7 +436,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                         </div>
                     </div>
 
-                    {/* Pastel */}
                     <div className="bg-white rounded-2xl shadow-xl p-4 md:p-8 overflow-x-auto">
                         <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
                             <span className="w-3 h-3 bg-purple-500 rounded-full mr-3"></span>
@@ -448,7 +450,10 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                             cx="50%"
                                             cy="50%"
                                             labelLine={true}
-                                            label={(entry) => entry.name.length > 15 ? `${entry.name.substring(0, 12)}...` : entry.name}
+                                            label={(entry) => {
+                                                const nombre = entry.name || 'Sin categoría'
+                                                return nombre.length > 15 ? `${nombre.substring(0, 12)}...` : nombre
+                                            }}
                                             outerRadius={100}
                                             innerRadius={40}
                                             fill="#8884d8"
@@ -482,7 +487,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
 
                 {/* Detalles */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Ingresos */}
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                         <div className="px-6 py-5 bg-gradient-to-r from-[#10B981] to-[#059669]">
                             <h3 className="text-lg font-bold text-white flex items-center">
@@ -538,7 +542,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                         </div>
                     </div>
 
-                    {/* Gastos */}
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                         <div className="px-6 py-5 bg-gradient-to-r from-[#EF4444] to-[#DC2626]">
                             <h3 className="text-lg font-bold text-white flex items-center">
@@ -550,7 +553,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                             {gastosPorCategoriaConDetalle.length > 0 ? (
                                 gastosPorCategoriaConDetalle.map((item) => (
                                     <div key={item.categoria} className="border-b border-gray-100 last:border-0">
-                                        {/* Cabecera de categoría */}
                                         <div
                                             onClick={() => setCategoriaExpandida(
                                                 categoriaExpandida === item.categoria ? null : item.categoria
@@ -573,7 +575,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                             </div>
                                         </div>
 
-                                        {/* Detalles expandidos */}
                                         {categoriaExpandida === item.categoria && (
                                             <div className="bg-gray-50 px-6 py-2 space-y-2">
                                                 {item.transacciones.map((transaccion) => (
