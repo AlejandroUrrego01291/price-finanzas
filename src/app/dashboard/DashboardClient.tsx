@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     PieChart, Pie, Cell, LineChart, Line
@@ -52,20 +53,24 @@ const NavButton = ({ href, icon, text, color }: { href: string; icon: string; te
 }
 
 export default function DashboardClient({ transacciones, mesesDisponibles }: Props) {
-    const [mesSeleccionado, setMesSeleccionado] = useState<string>(
-        mesesDisponibles[0] || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+    const router = useRouter()
+    const [fechaFiltro, setFechaFiltro] = useState<string>(
+        new Date().toISOString().split('T')[0]
     )
+    const [categoriaExpandida, setCategoriaExpandida] = useState<string | null>(null)
 
-    // Filtrar transacciones por mes seleccionado
+    // Filtrar transacciones desde la fecha seleccionada hacia atrás
     const transaccionesFiltradas = useMemo(() => {
-        if (!mesSeleccionado) return transacciones
+        if (!fechaFiltro) return transacciones
 
-        const [año, mes] = mesSeleccionado.split('-')
+        const fechaLimite = new Date(fechaFiltro)
+        fechaLimite.setHours(23, 59, 59, 999) // Incluir todo el día seleccionado
+
         return transacciones.filter(t => {
-            const fecha = new Date(t.date)
-            return fecha.getFullYear() === Number(año) && fecha.getMonth() + 1 === Number(mes)
+            const fechaTransaccion = new Date(t.date)
+            return fechaTransaccion <= fechaLimite
         })
-    }, [transacciones, mesSeleccionado])
+    }, [transacciones, fechaFiltro])
 
     // Calcular totales
     const totales = useMemo(() => {
@@ -88,36 +93,56 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
         ]
     }, [totales])
 
-    // Datos para gráfico de pastel (gastos por categoría)
-    const datosGastosPorCategoria = useMemo(() => {
-        const gastosPorCategoria: { [key: string]: number } = {}
+    // Datos para ingresos con detalles (conceptos y fechas)
+    const ingresosConDetalle = useMemo(() => {
+        return transaccionesFiltradas
+            .filter(t => t.type === 'INGRESO')
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    }, [transaccionesFiltradas])
+
+    // Datos para gastos agrupados por categoría con detalles
+    const gastosPorCategoriaConDetalle = useMemo(() => {
+        const gastosPorCategoria: {
+            [key: string]: {
+                total: number,
+                transacciones: Transaccion[]
+            }
+        } = {}
 
         transaccionesFiltradas
             .filter(t => t.type === 'GASTO')
             .forEach(t => {
                 const categoria = t.category || 'Sin categoría'
-                gastosPorCategoria[categoria] = (gastosPorCategoria[categoria] || 0) + t.value
+                if (!gastosPorCategoria[categoria]) {
+                    gastosPorCategoria[categoria] = { total: 0, transacciones: [] }
+                }
+                gastosPorCategoria[categoria].total += t.value
+                gastosPorCategoria[categoria].transacciones.push(t)
             })
+
+        // Ordenar cada categoría por fecha (más reciente primero)
+        Object.keys(gastosPorCategoria).forEach(cat => {
+            gastosPorCategoria[cat].transacciones.sort((a, b) =>
+                new Date(b.date).getTime() - new Date(a.date).getTime()
+            )
+        })
 
         return Object.entries(gastosPorCategoria)
-            .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value)
+            .map(([categoria, data]) => ({
+                categoria,
+                total: data.total,
+                transacciones: data.transacciones
+            }))
+            .sort((a, b) => b.total - a.total)
     }, [transaccionesFiltradas])
 
-    // Datos para ingresos por concepto
-    const ingresosPorConcepto = useMemo(() => {
-        const ingresos: { [key: string]: number } = {}
-
-        transaccionesFiltradas
-            .filter(t => t.type === 'INGRESO')
-            .forEach(t => {
-                ingresos[t.conceptName] = (ingresos[t.conceptName] || 0) + t.value
-            })
-
-        return Object.entries(ingresos)
-            .map(([name, valor]) => ({ name, valor }))
-            .sort((a, b) => b.valor - a.valor)
-    }, [transaccionesFiltradas])
+    // Datos para gráfico de pastel (gastos por categoría)
+    const datosGastosPorCategoria = useMemo(() => {
+        return gastosPorCategoriaConDetalle.map(item => ({
+            name: item.categoria,
+            value: item.total
+        }))
+    }, [gastosPorCategoriaConDetalle])
 
     // Datos para evolución mensual (últimos 6 meses)
     const evolucionMensual = useMemo(() => {
@@ -147,6 +172,26 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
         })
     }, [transacciones, mesesDisponibles])
 
+    const handleEdit = (id: string) => {
+        router.push(`/transacciones?edit=${id}`)
+    }
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('¿Estás seguro de eliminar esta transacción?')) return
+
+        try {
+            const response = await fetch(`/api/transacciones?id=${id}`, {
+                method: 'DELETE'
+            })
+
+            if (response.ok) {
+                router.refresh()
+            }
+        } catch (error) {
+            console.error('Error:', error)
+        }
+    }
+
     const formatearMoneda = (valor: number) => {
         return new Intl.NumberFormat('es-CO', {
             style: 'currency',
@@ -155,13 +200,20 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
         }).format(valor)
     }
 
+    const formatearFecha = (fecha: string) => {
+        return new Date(fecha).toLocaleDateString('es-CO', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        })
+    }
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-            {/* Navbar moderno con efecto glassmorphism */}
+            {/* Navbar */}
             <nav className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-20 items-center">
-                        {/* Logo con gradiente */}
                         <div className="flex items-center">
                             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                                 Mis finanzas
@@ -171,7 +223,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                             </span>
                         </div>
 
-                        {/* Botones de navegación - Transacciones primero */}
                         <div className="hidden md:flex items-center space-x-2">
                             <NavButton href="/transacciones" icon="💰" text="Transacciones" color="blue" />
                             <NavButton href="/conceptos" icon="📁" text="Conceptos" color="green" />
@@ -180,7 +231,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                             <NavButton href="/predicciones" icon="🔮" text="Predicciones" color="purple" />
                         </div>
 
-                        {/* Solo botón de cierre de sesión */}
                         <div className="flex items-center">
                             <Link
                                 href="/api/auth/signout"
@@ -195,51 +245,43 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
             </nav>
 
             <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                {/* Selector de mes con diseño mejorado */}
+                {/* Selector de fecha */}
                 <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between bg-white rounded-2xl shadow-md p-6">
                     <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4 md:mb-0">
                         Mi tablero de control
                     </h2>
                     <div className="flex items-center space-x-3">
-                        <label htmlFor="mes" className="text-gray-700 font-medium">
-                            📅 Período:
+                        <label htmlFor="fecha" className="text-gray-700 font-medium">
+                            📅 Mostrar desde:
                         </label>
-                        <select
-                            id="mes"
-                            value={mesSeleccionado}
-                            onChange={(e) => setMesSeleccionado(e.target.value)}
+                        <input
+                            type="date"
+                            id="fecha"
+                            value={fechaFiltro}
+                            onChange={(e) => setFechaFiltro(e.target.value)}
                             className="w-64 px-4 py-2.5 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700 font-medium"
-                        >
-                            {mesesDisponibles.map(mes => {
-                                const [año, mesNum] = mes.split('-')
-                                const fecha = new Date(Number(año), Number(mesNum) - 1)
-                                return (
-                                    <option key={mes} value={mes}>
-                                        {fecha.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
-                                    </option>
-                                )
-                            })}
-                        </select>
+                        />
                     </div>
                 </div>
 
-                {/* Tarjetas de resumen con colores coherentes a las barras */}
+                {/* Tarjetas de resumen */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    {/* Tarjeta de Ingresos - Color verde como la barra de ingresos */}
                     <div className="bg-gradient-to-br from-[#10B981] to-[#059669] rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-transform duration-300">
                         <p className="text-white/80 text-sm font-medium uppercase tracking-wider">INGRESOS</p>
                         <p className="text-3xl font-bold text-white mt-2">{formatearMoneda(totales.ingresos)}</p>
-                        <div className="mt-4 text-white/60 text-sm">↑ +12% vs mes anterior</div>
+                        <p className="mt-4 text-white/60 text-sm">
+                            {ingresosConDetalle.length} transacciones
+                        </p>
                     </div>
 
-                    {/* Tarjeta de Gastos - Color rojo como la barra de gastos */}
                     <div className="bg-gradient-to-br from-[#EF4444] to-[#DC2626] rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-transform duration-300">
                         <p className="text-white/80 text-sm font-medium uppercase tracking-wider">GASTOS</p>
                         <p className="text-3xl font-bold text-white mt-2">{formatearMoneda(totales.gastos)}</p>
-                        <div className="mt-4 text-white/60 text-sm">↓ -5% vs mes anterior</div>
+                        <p className="mt-4 text-white/60 text-sm">
+                            {transaccionesFiltradas.filter(t => t.type === 'GASTO').length} transacciones
+                        </p>
                     </div>
 
-                    {/* Tarjeta de Balance - Color azul */}
                     <div className={`bg-gradient-to-br from-[#3B82F6] to-[#2563EB] rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-transform duration-300`}>
                         <p className="text-white/80 text-sm font-medium uppercase tracking-wider">BALANCE</p>
                         <p className="text-3xl font-bold text-white mt-2">{formatearMoneda(totales.balance)}</p>
@@ -249,11 +291,11 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                     </div>
                 </div>
 
-                {/* Evolución mensual con diseño mejorado */}
+                {/* Evolución mensual */}
                 <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
                     <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
                         <span className="w-3 h-3 bg-blue-500 rounded-full mr-3"></span>
-                        Evolución Mensual
+                        Evolución Mensual (últimos 6 meses)
                     </h3>
                     <ResponsiveContainer width="100%" height={350}>
                         <LineChart data={evolucionMensual} margin={{ top: 20, right: 30, left: 80, bottom: 20 }}>
@@ -299,7 +341,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
 
                 {/* Gráficos de resumen */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    {/* Gráfico de barras - Ingresos vs Gastos */}
                     <div className="bg-white rounded-2xl shadow-xl p-8">
                         <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
                             <span className="w-3 h-3 bg-green-500 rounded-full mr-3"></span>
@@ -325,10 +366,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                             padding: '12px'
                                         }}
                                     />
-                                    <Bar
-                                        dataKey="valor"
-                                        radius={[10, 10, 0, 0]}
-                                    >
+                                    <Bar dataKey="valor" radius={[10, 10, 0, 0]}>
                                         {datosBarra.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={entry.fill} />
                                         ))}
@@ -338,7 +376,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                         </div>
                     </div>
 
-                    {/* Gráfico de pastel - Gastos por categoría */}
                     <div className="bg-white rounded-2xl shadow-xl p-8">
                         <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
                             <span className="w-3 h-3 bg-purple-500 rounded-full mr-3"></span>
@@ -385,7 +422,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                     </div>
                 </div>
 
-                {/* Detalles con diseño mejorado */}
+                {/* Detalles con funcionalidad de edición/eliminación */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Detalle de Ingresos */}
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -396,38 +433,142 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                             </h3>
                         </div>
                         <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
-                            {ingresosPorConcepto.map((item, index) => (
-                                <div key={index} className="px-6 py-4 flex justify-between items-center hover:bg-green-50 transition-colors duration-200">
-                                    <span className="text-gray-800 font-medium">{item.name}</span>
-                                    <span className="font-bold text-[#10B981] bg-green-100 px-3 py-1 rounded-full">
-                                        {formatearMoneda(item.valor)}
-                                    </span>
-                                </div>
-                            ))}
-                            {ingresosPorConcepto.length === 0 && (
+                            {ingresosConDetalle.length > 0 ? (
+                                ingresosConDetalle.map((transaccion) => (
+                                    <div key={transaccion.id} className="px-6 py-4 hover:bg-green-50 transition-colors duration-200 group">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-sm font-medium text-gray-900">
+                                                        {transaccion.conceptName}
+                                                    </p>
+                                                    <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => handleEdit(transaccion.id)}
+                                                            className="text-blue-600 hover:text-blue-800"
+                                                            title="Editar"
+                                                        >
+                                                            ✏️
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(transaccion.id)}
+                                                            className="text-red-600 hover:text-red-800"
+                                                            title="Eliminar"
+                                                        >
+                                                            🗑️
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-gray-500">
+                                                    {formatearFecha(transaccion.date)}
+                                                </p>
+                                                {transaccion.category && (
+                                                    <p className="text-xs text-gray-400 mt-1">
+                                                        {transaccion.category} • {transaccion.subType}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <p className="text-sm font-bold text-[#10B981] bg-green-100 px-3 py-1 rounded-full ml-4">
+                                                {formatearMoneda(transaccion.value)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
                                 <p className="px-6 py-12 text-center text-gray-400">No hay ingresos en este período</p>
                             )}
                         </div>
                     </div>
 
-                    {/* Detalle de Gastos por Categoría */}
+                    {/* Detalle de Gastos por Categoría - Expandible */}
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                         <div className="px-6 py-5 bg-gradient-to-r from-[#EF4444] to-[#DC2626]">
                             <h3 className="text-lg font-bold text-white flex items-center">
                                 <span className="mr-2">💸</span>
-                                Detalle de Gastos por Categoría
+                                Gastos por Categoría
                             </h3>
                         </div>
                         <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
-                            {datosGastosPorCategoria.map((item, index) => (
-                                <div key={index} className="px-6 py-4 flex justify-between items-center hover:bg-red-50 transition-colors duration-200">
-                                    <span className="text-gray-800 font-medium">{item.name}</span>
-                                    <span className="font-bold text-[#EF4444] bg-red-100 px-3 py-1 rounded-full">
-                                        {formatearMoneda(item.value)}
-                                    </span>
-                                </div>
-                            ))}
-                            {datosGastosPorCategoria.length === 0 && (
+                            {gastosPorCategoriaConDetalle.length > 0 ? (
+                                gastosPorCategoriaConDetalle.map((item) => (
+                                    <div key={item.categoria} className="border-b border-gray-100 last:border-0">
+                                        {/* Cabecera de categoría (clickeable) */}
+                                        <div
+                                            onClick={() => setCategoriaExpandida(
+                                                categoriaExpandida === item.categoria ? null : item.categoria
+                                            )}
+                                            className="px-6 py-4 flex justify-between items-center cursor-pointer hover:bg-red-50 transition-colors duration-200"
+                                        >
+                                            <div className="flex items-center space-x-2">
+                                                <span className="text-gray-800 font-medium">{item.categoria}</span>
+                                                <span className="text-xs text-gray-400">
+                                                    ({item.transacciones.length} items)
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center space-x-3">
+                                                <span className="font-bold text-[#EF4444] bg-red-100 px-3 py-1 rounded-full">
+                                                    {formatearMoneda(item.total)}
+                                                </span>
+                                                <span className="text-gray-400">
+                                                    {categoriaExpandida === item.categoria ? '▼' : '▶'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Detalles de la categoría (expandible) */}
+                                        {categoriaExpandida === item.categoria && (
+                                            <div className="bg-gray-50 px-6 py-2 space-y-2">
+                                                {item.transacciones.map((transaccion) => (
+                                                    <div key={transaccion.id} className="py-2 hover:bg-white transition-colors duration-200 group rounded-lg px-3">
+                                                        <div className="flex justify-between items-start">
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center justify-between">
+                                                                    <p className="text-sm font-medium text-gray-800">
+                                                                        {transaccion.conceptName}
+                                                                    </p>
+                                                                    <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation()
+                                                                                handleEdit(transaccion.id)
+                                                                            }}
+                                                                            className="text-blue-600 hover:text-blue-800"
+                                                                            title="Editar"
+                                                                        >
+                                                                            ✏️
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation()
+                                                                                handleDelete(transaccion.id)
+                                                                            }}
+                                                                            className="text-red-600 hover:text-red-800"
+                                                                            title="Eliminar"
+                                                                        >
+                                                                            🗑️
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                <p className="text-xs text-gray-500">
+                                                                    {formatearFecha(transaccion.date)}
+                                                                </p>
+                                                                {transaccion.subType && (
+                                                                    <p className="text-xs text-gray-400 mt-1">
+                                                                        {transaccion.subType}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-sm font-bold text-[#EF4444] bg-red-100 px-3 py-1 rounded-full ml-4">
+                                                                {formatearMoneda(transaccion.value)}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            ) : (
                                 <p className="px-6 py-12 text-center text-gray-400">No hay gastos en este período</p>
                             )}
                         </div>
