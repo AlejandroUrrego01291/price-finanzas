@@ -61,21 +61,44 @@ export default function TransaccionesClient({
     // Filtrar conceptos según el tipo seleccionado
     const conceptosFiltrados = conceptos.filter(c => c.type === tipo)
 
-    // ===== NUEVO: Leer parámetro de edición de la URL =====
+    // CORREGIDO: solo se ejecuta al montar el componente ([] como dependencia)
+    // Evita re-dispararse cada vez que cambia el estado de transacciones
     useEffect(() => {
+        if (typeof window === 'undefined') return
+
         const params = new URLSearchParams(window.location.search)
         const editId = params.get('edit')
-        if (editId) {
-            const transaccion = transacciones.find(t => t.id === editId)
-            if (transaccion) {
-                handleEdit(transaccion)
-                // Limpiar el parámetro de la URL sin recargar la página
-                const url = new URL(window.location.href)
-                url.searchParams.delete('edit')
-                window.history.replaceState({}, '', url.toString())
-            }
+        if (!editId) return
+
+        // Buscar primero en el estado local, luego en los iniciales como fallback
+        const transaccion =
+            transaccionesIniciales.find(t => t.id === editId)
+
+        if (!transaccion) {
+            console.warn('Transacción no encontrada con ID:', editId)
+            return
         }
-    }, [transacciones])
+
+        setEditandoId(transaccion.id)
+        setTipo(transaccion.type as 'INGRESO' | 'GASTO')
+
+        // CORREGIDO: fallback robusto para conceptoId
+        const conceptoEncontrado = conceptos.find(
+            c => c.id === transaccion.concept?.id || c.name === transaccion.conceptName
+        )
+        setConceptoId(conceptoEncontrado?.id || '')
+
+        setValor(transaccion.value.toString())
+        setFecha(transaccion.date)
+        setMostrarFormNuevoConcepto(false)
+
+        // Limpiar el parámetro de la URL sin recargar
+        const url = new URL(window.location.href)
+        url.searchParams.delete('edit')
+        window.history.replaceState({}, '', url.toString())
+
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }, []) // Solo al montar — dependencia vacía intencional
 
     // Cuando se selecciona un concepto, auto-completar el valor si existe
     const handleConceptoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -119,8 +142,11 @@ export default function TransaccionesClient({
                     categoriaFinal = 'No planeados'
                     subTipoFinal = 'CASUAL'
 
-                    // Recargar conceptos
+                    // Refrescar para que el nuevo concepto aparezca en el selector
                     router.refresh()
+                } else {
+                    console.error('Error al crear el concepto')
+                    return
                 }
             } catch (error) {
                 console.error('Error creando concepto:', error)
@@ -135,7 +161,9 @@ export default function TransaccionesClient({
         }
 
         try {
-            const url = editandoId ? `/api/transacciones?id=${editandoId}` : '/api/transacciones'
+            const url = editandoId
+                ? `/api/transacciones?id=${editandoId}`
+                : '/api/transacciones'
             const method = editandoId ? 'PUT' : 'POST'
 
             const response = await fetch(url, {
@@ -153,52 +181,52 @@ export default function TransaccionesClient({
                 })
             })
 
-            if (response.ok) {
-                const transaccionActualizada = await response.json()
-
-                if (editandoId) {
-                    // Actualizar la transacción existente
-                    setTransacciones(transacciones.map(t =>
-                        t.id === editandoId ? transaccionActualizada : t
-                    ))
-
-                    // Recalcular totales
-                    const nuevaTransacciones = transacciones.map(t =>
-                        t.id === editandoId ? transaccionActualizada : t
-                    )
-
-                    const nuevosIngresos = nuevaTransacciones
-                        .filter(t => t.type === 'INGRESO')
-                        .reduce((sum, t) => sum + t.value, 0)
-
-                    const nuevosGastos = nuevaTransacciones
-                        .filter(t => t.type === 'GASTO')
-                        .reduce((sum, t) => sum + t.value, 0)
-
-                    setTotalIngresos(nuevosIngresos)
-                    setTotalGastos(nuevosGastos)
-
-                    setEditandoId(null)
-                } else {
-                    // Agregar nueva transacción
-                    setTransacciones([transaccionActualizada, ...transacciones])
-
-                    if (tipo === 'INGRESO') {
-                        setTotalIngresos(totalIngresos + Number(valor))
-                    } else {
-                        setTotalGastos(totalGastos + Number(valor))
-                    }
-                }
-
-                // Limpiar formulario
-                setConceptoId('')
-                setValor('')
-                setNuevoConcepto('')
-                setMostrarFormNuevoConcepto(false)
-                setFecha(new Date().toISOString().split('T')[0])
-
-                router.refresh()
+            if (!response.ok) {
+                console.error('Error en la respuesta del servidor')
+                return
             }
+
+            const transaccionActualizada = await response.json()
+
+            if (editandoId) {
+                // CORREGIDO: calcular el nuevo array una sola vez y reutilizarlo
+                const transaccionesActualizadas = transacciones.map(t =>
+                    t.id === editandoId ? transaccionActualizada : t
+                )
+                setTransacciones(transaccionesActualizadas)
+
+                const nuevosIngresos = transaccionesActualizadas
+                    .filter(t => t.type === 'INGRESO')
+                    .reduce((sum, t) => sum + t.value, 0)
+                const nuevosGastos = transaccionesActualizadas
+                    .filter(t => t.type === 'GASTO')
+                    .reduce((sum, t) => sum + t.value, 0)
+
+                setTotalIngresos(nuevosIngresos)
+                setTotalGastos(nuevosGastos)
+                setEditandoId(null)
+            } else {
+                // Nueva transacción
+                const nuevasTransacciones = [transaccionActualizada, ...transacciones]
+                setTransacciones(nuevasTransacciones)
+
+                if (tipo === 'INGRESO') {
+                    setTotalIngresos(prev => prev + Number(valor))
+                } else {
+                    setTotalGastos(prev => prev + Number(valor))
+                }
+            }
+
+            // Limpiar formulario
+            setConceptoId('')
+            setValor('')
+            setNuevoConcepto('')
+            setMostrarFormNuevoConcepto(false)
+            setFecha(new Date().toISOString().split('T')[0])
+
+            // CORREGIDO: router.refresh() solo para sincronizar el servidor,
+            // no para manejar estado local (ya lo manejamos arriba)
+            router.refresh()
         } catch (error) {
             console.error('Error:', error)
         }
@@ -207,12 +235,17 @@ export default function TransaccionesClient({
     const handleEdit = (transaccion: Transaccion) => {
         setEditandoId(transaccion.id)
         setTipo(transaccion.type as 'INGRESO' | 'GASTO')
-        setConceptoId(transaccion.concept?.id || '')
+
+        // CORREGIDO: buscar el concepto también por nombre como fallback
+        const conceptoEncontrado = conceptos.find(
+            c => c.id === transaccion.concept?.id || c.name === transaccion.conceptName
+        )
+        setConceptoId(conceptoEncontrado?.id || '')
+
         setValor(transaccion.value.toString())
         setFecha(transaccion.date)
         setMostrarFormNuevoConcepto(false)
 
-        // Scroll suave al formulario
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
@@ -225,25 +258,20 @@ export default function TransaccionesClient({
             })
 
             if (response.ok) {
-                // Obtener la transacción a eliminar para ajustar totales
                 const transaccionEliminada = transacciones.find(t => t.id === id)
 
                 if (transaccionEliminada) {
                     if (transaccionEliminada.type === 'INGRESO') {
-                        setTotalIngresos(totalIngresos - transaccionEliminada.value)
+                        setTotalIngresos(prev => prev - transaccionEliminada.value)
                     } else {
-                        setTotalGastos(totalGastos - transaccionEliminada.value)
+                        setTotalGastos(prev => prev - transaccionEliminada.value)
                     }
                 }
 
-                setTransacciones(transacciones.filter(t => t.id !== id))
+                setTransacciones(prev => prev.filter(t => t.id !== id))
 
-                // Si estábamos editando esta transacción, cancelar edición
                 if (editandoId === id) {
-                    setEditandoId(null)
-                    setConceptoId('')
-                    setValor('')
-                    setFecha(new Date().toISOString().split('T')[0])
+                    handleCancelEdit()
                 }
 
                 router.refresh()

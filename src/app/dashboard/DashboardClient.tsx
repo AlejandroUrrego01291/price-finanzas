@@ -31,7 +31,6 @@ type Props = {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FF6B6B', '#6B66FF']
 
-// Componente de botón de navegación reutilizable
 const NavButton = ({ href, icon, text, color }: { href: string; icon: string; text: string; color: string }) => {
     const colorClasses = {
         blue: 'hover:bg-blue-50 hover:text-blue-600 border-blue-200',
@@ -59,7 +58,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
     )
     const [categoriaExpandida, setCategoriaExpandida] = useState<string | null>(null)
 
-    // Filtrar transacciones desde la fecha seleccionada hacia atrás
+    // Filtrar transacciones hasta la fecha seleccionada
     const transaccionesFiltradas = useMemo(() => {
         if (!fechaFiltro) return transacciones
 
@@ -85,7 +84,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
         return { ingresos, gastos, balance: ingresos - gastos }
     }, [transaccionesFiltradas])
 
-    // Datos para gráfico de barras (ingresos vs gastos)
+    // Datos para gráfico de barras
     const datosBarra = useMemo(() => {
         return [
             { name: 'Ingresos', valor: totales.ingresos, fill: '#10B981' },
@@ -93,14 +92,14 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
         ]
     }, [totales])
 
-    // Datos para ingresos con detalles
+    // Ingresos con detalle
     const ingresosConDetalle = useMemo(() => {
         return transaccionesFiltradas
             .filter(t => t.type === 'INGRESO')
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     }, [transaccionesFiltradas])
 
-    // Datos para gastos agrupados por categoría
+    // Gastos agrupados por categoría
     const gastosPorCategoriaConDetalle = useMemo(() => {
         const gastosPorCategoria: {
             [key: string]: {
@@ -143,7 +142,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
         }))
     }, [gastosPorCategoriaConDetalle])
 
-    // Datos para evolución mensual
+    // Evolución mensual
     const evolucionMensual = useMemo(() => {
         const ultimosMeses = mesesDisponibles.slice(0, 6).reverse()
 
@@ -171,10 +170,14 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
         })
     }, [transacciones, mesesDisponibles])
 
+    // CORREGIDO: redirige a /transacciones con el parámetro edit
+    // TransaccionesClient lo captura en su useEffect al montar
     const handleEdit = (id: string) => {
         router.push(`/transacciones?edit=${id}`)
     }
 
+    // CORREGIDO: router.refresh() es suficiente — el dashboard no maneja
+    // estado local de transacciones, así que refrescar los server props es correcto
     const handleDelete = async (id: string) => {
         if (!confirm('¿Estás seguro de eliminar esta transacción?')) return
 
@@ -185,6 +188,8 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
 
             if (response.ok) {
                 router.refresh()
+            } else {
+                console.error('Error al eliminar la transacción')
             }
         } catch (error) {
             console.error('Error:', error)
@@ -281,7 +286,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                         </p>
                     </div>
 
-                    <div className={`bg-gradient-to-br from-[#3B82F6] to-[#2563EB] rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-transform duration-300`}>
+                    <div className="bg-gradient-to-br from-[#3B82F6] to-[#2563EB] rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-transform duration-300">
                         <p className="text-white/80 text-sm font-medium uppercase tracking-wider">BALANCE</p>
                         <p className="text-3xl font-bold text-white mt-2">{formatearMoneda(totales.balance)}</p>
                         <div className="mt-4 text-white/60 text-sm">
