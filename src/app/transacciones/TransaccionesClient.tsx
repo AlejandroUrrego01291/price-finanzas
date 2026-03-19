@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 // ============================================
@@ -60,6 +60,22 @@ export default function TransaccionesClient({
 
     // Filtrar conceptos según el tipo seleccionado
     const conceptosFiltrados = conceptos.filter(c => c.type === tipo)
+
+    // ===== NUEVO: Leer parámetro de edición de la URL =====
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const editId = params.get('edit')
+        if (editId) {
+            const transaccion = transacciones.find(t => t.id === editId)
+            if (transaccion) {
+                handleEdit(transaccion)
+                // Limpiar el parámetro de la URL sin recargar la página
+                const url = new URL(window.location.href)
+                url.searchParams.delete('edit')
+                window.history.replaceState({}, '', url.toString())
+            }
+        }
+    }, [transacciones])
 
     // Cuando se selecciona un concepto, auto-completar el valor si existe
     const handleConceptoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {

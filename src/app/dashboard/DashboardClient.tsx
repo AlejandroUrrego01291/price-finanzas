@@ -64,7 +64,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
         if (!fechaFiltro) return transacciones
 
         const fechaLimite = new Date(fechaFiltro)
-        fechaLimite.setHours(23, 59, 59, 999) // Incluir todo el día seleccionado
+        fechaLimite.setHours(23, 59, 59, 999)
 
         return transacciones.filter(t => {
             const fechaTransaccion = new Date(t.date)
@@ -93,14 +93,14 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
         ]
     }, [totales])
 
-    // Datos para ingresos con detalles (conceptos y fechas)
+    // Datos para ingresos con detalles
     const ingresosConDetalle = useMemo(() => {
         return transaccionesFiltradas
             .filter(t => t.type === 'INGRESO')
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     }, [transaccionesFiltradas])
 
-    // Datos para gastos agrupados por categoría con detalles
+    // Datos para gastos agrupados por categoría
     const gastosPorCategoriaConDetalle = useMemo(() => {
         const gastosPorCategoria: {
             [key: string]: {
@@ -120,7 +120,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                 gastosPorCategoria[categoria].transacciones.push(t)
             })
 
-        // Ordenar cada categoría por fecha (más reciente primero)
         Object.keys(gastosPorCategoria).forEach(cat => {
             gastosPorCategoria[cat].transacciones.sort((a, b) =>
                 new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -136,7 +135,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
             .sort((a, b) => b.total - a.total)
     }, [transaccionesFiltradas])
 
-    // Datos para gráfico de pastel (gastos por categoría)
+    // Datos para gráfico de pastel
     const datosGastosPorCategoria = useMemo(() => {
         return gastosPorCategoriaConDetalle.map(item => ({
             name: item.categoria,
@@ -144,7 +143,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
         }))
     }, [gastosPorCategoriaConDetalle])
 
-    // Datos para evolución mensual (últimos 6 meses)
+    // Datos para evolución mensual
     const evolucionMensual = useMemo(() => {
         const ultimosMeses = mesesDisponibles.slice(0, 6).reverse()
 
