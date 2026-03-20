@@ -219,6 +219,9 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                             <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                                 Mis finanzas
                             </h1>
+                            <span className="ml-3 text-sm font-medium text-gray-600 hidden md:inline-block">
+                                Dashboard
+                            </span>
                         </div>
 
                         {/* Menú de escritorio */}
