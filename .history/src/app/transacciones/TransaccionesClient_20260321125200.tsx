@@ -276,7 +276,7 @@ export default function TransaccionesClient({
                                 Mis finanzas
                             </h1>
                             <span className="ml-3 text-sm font-medium text-gray-600 hidden md:inline-block">
-                                Registrar Transacción
+                                Nueva Transacción
                             </span>
                         </div>
                         <div className="flex items-center">
@@ -306,17 +306,6 @@ export default function TransaccionesClient({
                                 <div className="flex rounded-md shadow-sm">
                                     <button
                                         type="button"
-                                        onClick={() => setTipo('GASTO')}
-                                        className={`flex-1 px-3 py-2 text-sm font-medium rounded-r-md border-t border-r border-b ${tipo === 'GASTO'
-                                            ? 'bg-red-600 text-white border-red-600'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        Gasto
-                                    </button>
-
-                                    <button
-                                        type="button"
                                         onClick={() => setTipo('INGRESO')}
                                         className={`flex-1 px-3 py-2 text-sm font-medium rounded-l-md border ${tipo === 'INGRESO'
                                             ? 'bg-green-600 text-white border-green-600'
@@ -325,7 +314,16 @@ export default function TransaccionesClient({
                                     >
                                         Ingreso
                                     </button>
-
+                                    <button
+                                        type="button"
+                                        onClick={() => setTipo('GASTO')}
+                                        className={`flex-1 px-3 py-2 text-sm font-medium rounded-r-md border-t border-r border-b ${tipo === 'GASTO'
+                                            ? 'bg-red-600 text-white border-red-600'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        Gasto
+                                    </button>
                                 </div>
                             </div>
 
