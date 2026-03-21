@@ -287,7 +287,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                 >
                                     <div className="flex items-center space-x-3">
                                         <span className="text-xl">💰</span>
-                                        <span>Registrar Transacción</span>
+                                        <span>Transacciones</span>
                                     </div>
                                 </Link>
                                 <Link
