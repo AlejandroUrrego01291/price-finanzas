@@ -36,7 +36,6 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
     const tipos = ['INGRESO', 'GASTO']
     const subtipos = ['FIJO', 'VARIABLE', 'CASUAL']
 
-    // Categorías específicas por tipo
     const categoriasIngreso = ['Empleo', 'Comisiones', 'Independiente']
     const categoriasGasto = [
         'Hogar', 'Telecomunicaciones', 'Educación', 'Alimentación',
@@ -44,17 +43,12 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
         'Transporte', 'Salud', 'Obligaciones', 'Metas'
     ]
 
-    // Determinar qué categorías mostrar según el tipo seleccionado
     const categoriasDisponibles = formData.type === 'INGRESO' ? categoriasIngreso : categoriasGasto
-
-    // Separar conceptos por tipo
     const ingresos = conceptos.filter(c => c.type === 'INGRESO')
     const gastos = conceptos.filter(c => c.type === 'GASTO')
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-
-        // Determinar la categoría final (puede ser la seleccionada o la nueva)
         const categoriaFinal = mostrarInputNuevaCategoria && nuevaCategoria
             ? nuevaCategoria
             : formData.category
@@ -113,12 +107,8 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
 
     const handleDelete = async (id: string) => {
         if (!confirm('¿Estás seguro de eliminar este concepto?')) return
-
         try {
-            const response = await fetch(`/api/conceptos?id=${id}`, {
-                method: 'DELETE'
-            })
-
+            const response = await fetch(`/api/conceptos?id=${id}`, { method: 'DELETE' })
             if (response.ok) {
                 setConceptos(conceptos.filter(c => c.id !== id))
                 router.refresh()
@@ -139,12 +129,11 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-            {/* Navbar */}
             <nav className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-20 items-center">
                         <div className="flex items-center">
-                            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                                 Mis finanzas
                             </h1>
                             <span className="ml-3 text-sm font-medium text-gray-600 hidden md:inline-block">
@@ -154,7 +143,7 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
                         <div className="flex items-center">
                             <button
                                 onClick={() => router.push('/dashboard')}
-                                className="px-5 py-2.5 text-sm font-medium text-gray-700 hover:text-white border-2 border-gray-300 rounded-full hover:bg-gray-600 hover:border-gray-600 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
+                                className="px-4 py-2 md:px-5 md:py-2.5 text-sm font-medium text-gray-700 hover:text-white border-2 border-gray-300 rounded-full hover:bg-gray-600 hover:border-gray-600 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
                             >
                                 <span>←</span>
                                 <span className="hidden md:inline">Volver al Dashboard</span>
@@ -164,14 +153,14 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
                 </div>
             </nav>
 
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                {/* Formulario para crear/editar conceptos */}
-                <div className="bg-white shadow rounded-lg p-6 mb-6">
+            <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                {/* Formulario */}
+                <div className="bg-white shadow rounded-lg p-4 md:p-6 mb-6">
                     <h2 className="text-subtitle text-lg mb-4">
                         {editandoId ? 'Editar Concepto' : 'Nuevo Concepto'}
                     </h2>
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-body text-sm font-medium mb-1">Tipo</label>
                                 <select
@@ -203,15 +192,13 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
                             </div>
 
                             <div>
-                                <label className="block text-body text-sm font-medium mb-1">
-                                    Categoría
-                                </label>
+                                <label className="block text-body text-sm font-medium mb-1">Categoría</label>
                                 {!mostrarInputNuevaCategoria ? (
-                                    <div className="flex space-x-2">
+                                    <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2">
                                         <select
                                             value={formData.category}
                                             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
                                         >
                                             <option value="">Selecciona una categoría</option>
                                             {categoriasDisponibles.map(cat => (
@@ -221,18 +208,18 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
                                         <button
                                             type="button"
                                             onClick={() => setMostrarInputNuevaCategoria(true)}
-                                            className="mt-1 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm whitespace-nowrap"
+                                            className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm whitespace-nowrap"
                                         >
                                             + Nueva
                                         </button>
                                     </div>
                                 ) : (
-                                    <div className="flex space-x-2">
+                                    <div className="flex flex-col sm:flex-row sm:space-x-2 gap-2">
                                         <input
                                             type="text"
                                             value={nuevaCategoria}
                                             onChange={(e) => setNuevaCategoria(e.target.value)}
-                                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
                                             placeholder="Nueva categoría"
                                             autoFocus
                                         />
@@ -242,7 +229,7 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
                                                 setMostrarInputNuevaCategoria(false)
                                                 setNuevaCategoria('')
                                             }}
-                                            className="mt-1 px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm"
+                                            className="px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm"
                                         >
                                             Cancelar
                                         </button>
@@ -327,7 +314,7 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
                 <div className="flex space-x-2 mb-4">
                     <button
                         onClick={() => setMostrarIngresos(true)}
-                        className={`px-4 py-2 rounded-md ${mostrarIngresos
+                        className={`px-4 py-2 rounded-md text-sm md:text-base ${mostrarIngresos
                             ? 'bg-green-600 text-white'
                             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
@@ -336,7 +323,7 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
                     </button>
                     <button
                         onClick={() => setMostrarIngresos(false)}
-                        className={`px-4 py-2 rounded-md ${!mostrarIngresos
+                        className={`px-4 py-2 rounded-md text-sm md:text-base ${!mostrarIngresos
                             ? 'bg-red-600 text-white'
                             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
@@ -345,62 +332,64 @@ export default function ConceptosClient({ conceptos: initialConceptos }: Props) 
                     </button>
                 </div>
 
-                {/* Tabla de conceptos */}
+                {/* Tabla responsiva con scroll horizontal */}
                 <div className="bg-white shadow rounded-lg overflow-hidden">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Concepto</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Categoría</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Subtipo</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Valor Fijo</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Día Fijo</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {(mostrarIngresos ? ingresos : gastos).map((concepto) => (
-                                <tr key={concepto.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {concepto.name}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        {concepto.category || '-'}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        {concepto.subType || '-'}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        {concepto.value ? formatearMoneda(concepto.value) : '-'}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        {concepto.fixedDate || '-'}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button
-                                            onClick={() => handleEdit(concepto)}
-                                            className="text-blue-600 hover:text-blue-900 mr-3"
-                                        >
-                                            Editar
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(concepto.id)}
-                                            className="text-red-600 hover:text-red-900"
-                                        >
-                                            Eliminar
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {(mostrarIngresos ? ingresos : gastos).length === 0 && (
+                    <div className="overflow-x-auto">
+                        <table className="min-w-[800px] md:min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                                        No hay {mostrarIngresos ? 'ingresos' : 'gastos'} creados
-                                    </td>
+                                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Concepto</th>
+                                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Categoría</th>
+                                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Subtipo</th>
+                                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Valor Fijo</th>
+                                    <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Día Fijo</th>
+                                    <th className="px-4 md:px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Acciones</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {(mostrarIngresos ? ingresos : gastos).map((concepto) => (
+                                    <tr key={concepto.id} className="hover:bg-gray-50">
+                                        <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                            {concepto.name}
+                                        </td>
+                                        <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                            {concepto.category || '-'}
+                                        </td>
+                                        <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                            {concepto.subType || '-'}
+                                        </td>
+                                        <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                            {concepto.value ? formatearMoneda(concepto.value) : '-'}
+                                        </td>
+                                        <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                            {concepto.fixedDate || '-'}
+                                        </td>
+                                        <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button
+                                                onClick={() => handleEdit(concepto)}
+                                                className="text-blue-600 hover:text-blue-900 mr-3"
+                                            >
+                                                Editar
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(concepto.id)}
+                                                className="text-red-600 hover:text-red-900"
+                                            >
+                                                Eliminar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {(mostrarIngresos ? ingresos : gastos).length === 0 && (
+                                    <tr>
+                                        <td colSpan={6} className="px-4 md:px-6 py-8 text-center text-gray-500">
+                                            No hay {mostrarIngresos ? 'ingresos' : 'gastos'} creados
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </main>
         </div>
