@@ -516,8 +516,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                     const hoy = new Date()
                                     hoy.setHours(0, 0, 0, 0)
                                     const isFuture = fechaTransaccion > hoy
-                                    // El checkbox debe estar marcado si la fecha es hoy o anterior
-                                    const shouldBeChecked = !isFuture
 
                                     return (
                                         <div key={transaccion.id} className="px-6 py-4 hover:bg-green-50 transition-colors duration-200 group">
@@ -525,14 +523,14 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                                 <div className="flex items-center space-x-3 flex-1">
                                                     <input
                                                         type="checkbox"
-                                                        checked={shouldBeChecked}
+                                                        checked={transaccion.completed}
                                                         onChange={() => handleToggleCompleted(transaccion.id, transaccion.completed)}
                                                         className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
                                                         disabled={isFuture}
                                                     />
                                                     <div className="flex-1">
                                                         <div className="flex items-center justify-between">
-                                                            <p className="text-sm font-medium text-gray-900">
+                                                            <p className={`text-sm font-medium ${transaccion.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                                                                 {transaccion.conceptName}
                                                             </p>
                                                             <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -563,7 +561,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                                         )}
                                                     </div>
                                                 </div>
-                                                <p className="text-sm font-bold text-[#10B981] bg-green-100 px-3 py-1 rounded-full ml-4">
+                                                <p className={`text-sm font-bold ${transaccion.completed ? 'text-gray-500' : 'text-[#10B981]'} bg-green-100 px-3 py-1 rounded-full ml-4`}>
                                                     {formatearMoneda(transaccion.value)}
                                                 </p>
                                             </div>
@@ -576,7 +574,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                         </div>
                     </div>
 
-                    {/* Detalle de Gastos por Categoría - Expandible */}
+                    {/* Detalle de Gastos por Categoría - Expandible con checkbox */}
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                         <div className="px-6 py-5 bg-gradient-to-r from-[#EF4444] to-[#DC2626]">
                             <h3 className="text-lg font-bold text-white flex items-center">
@@ -611,7 +609,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                             </div>
                                         </div>
 
-                                        {/* Detalles expandidos */}
+                                        {/* Detalles expandidos con checkbox */}
                                         {categoriaExpandida === item.categoria && (
                                             <div className="bg-gray-50 px-6 py-2 space-y-2">
                                                 {item.transacciones.map((transaccion) => {
@@ -619,8 +617,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                                     const hoy = new Date()
                                                     hoy.setHours(0, 0, 0, 0)
                                                     const isFuture = fechaTransaccion > hoy
-                                                    // El checkbox debe estar marcado si la fecha es hoy o anterior
-                                                    const shouldBeChecked = !isFuture
 
                                                     return (
                                                         <div key={transaccion.id} className="py-2 hover:bg-white transition-colors duration-200 group rounded-lg px-3">
@@ -628,7 +624,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                                                 <div className="flex items-center space-x-3 flex-1">
                                                                     <input
                                                                         type="checkbox"
-                                                                        checked={shouldBeChecked}
+                                                                        checked={transaccion.completed}
                                                                         onChange={(e) => {
                                                                             e.stopPropagation()
                                                                             handleToggleCompleted(transaccion.id, transaccion.completed)
@@ -638,7 +634,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                                                     />
                                                                     <div className="flex-1">
                                                                         <div className="flex items-center justify-between">
-                                                                            <p className="text-sm font-medium text-gray-800">
+                                                                            <p className={`text-sm font-medium ${transaccion.completed ? 'line-through text-gray-500' : 'text-gray-800'}`}>
                                                                                 {transaccion.conceptName}
                                                                             </p>
                                                                             <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -675,7 +671,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles }: Pro
                                                                         )}
                                                                     </div>
                                                                 </div>
-                                                                <p className="text-sm font-bold text-[#EF4444] bg-red-100 px-3 py-1 rounded-full ml-4">
+                                                                <p className={`text-sm font-bold ${transaccion.completed ? 'text-gray-500' : 'text-[#EF4444]'} bg-red-100 px-3 py-1 rounded-full ml-4`}>
                                                                     {formatearMoneda(transaccion.value)}
                                                                 </p>
                                                             </div>

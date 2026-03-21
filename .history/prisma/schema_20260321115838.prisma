@@ -77,7 +77,7 @@ model Transaction {
   date        DateTime
   category    String?
   subType     String?
-  completed   Boolean  @default(false)
+  completed   Boolean  @default(false)  // ← DEBE ESTAR ESTA LÍNEA
   createdAt   DateTime @default(now())
   
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
