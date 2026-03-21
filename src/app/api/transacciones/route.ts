@@ -82,11 +82,72 @@ export async function POST(request: Request) {
             }
         })
 
+        console.log('Transacción creada:', transaccion.id)
+
         return NextResponse.json(transaccion)
     } catch (error) {
         console.error('Error en POST transaccion:', error)
         return NextResponse.json(
             { error: 'Error al crear transacción' },
+            { status: 500 }
+        )
+    }
+}
+
+// PUT - Actualizar una transacción
+export async function PUT(request: Request) {
+    try {
+        const session = await auth()
+
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+        }
+
+        const { searchParams } = new URL(request.url)
+        const id = searchParams.get('id')
+        const body = await request.json()
+        const { type, conceptId, conceptName, value, date, category, subType } = body
+
+        if (!id) {
+            return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+        }
+
+        // Verificar que la transacción pertenece al usuario
+        const existing = await prisma.transaction.findFirst({
+            where: {
+                id,
+                userId: session.user.id
+            }
+        })
+
+        if (!existing) {
+            return NextResponse.json({ error: 'Transacción no encontrada' }, { status: 404 })
+        }
+
+        // Actualizar la transacción
+        const transaccion = await prisma.transaction.update({
+            where: { id },
+            data: {
+                type,
+                conceptId: conceptId || null,
+                conceptName,
+                value,
+                date: new Date(date),
+                category: category || null,
+                subType: subType || null
+            },
+            include: {
+                concept: true
+            }
+        })
+
+        console.log('Transacción actualizada en DB:', transaccion.id)
+
+        return NextResponse.json(transaccion)
+    } catch (error) {
+        console.error('Error en PUT transaccion:', error)
+        return NextResponse.json(
+            { error: 'Error al actualizar transacción' },
             { status: 500 }
         )
     }
@@ -129,6 +190,8 @@ export async function DELETE(request: Request) {
         await prisma.transaction.delete({
             where: { id }
         })
+
+        console.log('Transacción eliminada:', id)
 
         return NextResponse.json({ success: true })
     } catch (error) {

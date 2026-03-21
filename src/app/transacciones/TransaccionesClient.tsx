@@ -61,9 +61,8 @@ export default function TransaccionesClient({
     // Filtrar conceptos según el tipo seleccionado
     const conceptosFiltrados = conceptos.filter(c => c.type === tipo)
 
-    // ===== CORREGIDO: Leer parámetro de edición de la URL =====
+    // ===== Leer parámetro de edición de la URL =====
     useEffect(() => {
-        // Ejecutar solo en el cliente
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search)
             const editId = params.get('edit')
@@ -74,7 +73,6 @@ export default function TransaccionesClient({
 
                 if (transaccion) {
                     console.log('Transacción encontrada:', transaccion)
-                    // Llamar directamente a la función de edición
                     setEditandoId(transaccion.id)
                     setTipo(transaccion.type as 'INGRESO' | 'GASTO')
                     setConceptoId(transaccion.concept?.id || '')
@@ -82,19 +80,17 @@ export default function TransaccionesClient({
                     setFecha(transaccion.date)
                     setMostrarFormNuevoConcepto(false)
 
-                    // Limpiar el parámetro de la URL sin recargar la página
                     const url = new URL(window.location.href)
                     url.searchParams.delete('edit')
                     window.history.replaceState({}, '', url.toString())
 
-                    // Scroll al formulario
                     window.scrollTo({ top: 0, behavior: 'smooth' })
                 } else {
                     console.log('Transacción no encontrada con ID:', editId)
                 }
             }
         }
-    }, [transacciones]) // Dependencia: cuando cambian las transacciones
+    }, [transacciones])
 
     // Cuando se selecciona un concepto, auto-completar el valor si existe
     const handleConceptoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -138,8 +134,10 @@ export default function TransaccionesClient({
                     categoriaFinal = 'No planeados'
                     subTipoFinal = 'CASUAL'
 
-                    // Recargar conceptos
                     router.refresh()
+                } else {
+                    console.error('Error creando concepto')
+                    return
                 }
             } catch (error) {
                 console.error('Error creando concepto:', error)
@@ -147,7 +145,10 @@ export default function TransaccionesClient({
             }
         } else {
             const concepto = conceptos.find(c => c.id === conceptoId)
-            if (!concepto) return
+            if (!concepto) {
+                console.error('Concepto no encontrado')
+                return
+            }
             conceptoFinalNombre = concepto.name
             categoriaFinal = concepto.category || 'No planeados'
             subTipoFinal = concepto.subType || 'CASUAL'
@@ -157,49 +158,51 @@ export default function TransaccionesClient({
             const url = editandoId ? `/api/transacciones?id=${editandoId}` : '/api/transacciones'
             const method = editandoId ? 'PUT' : 'POST'
 
+            const payload = {
+                id: editandoId,
+                type: tipo,
+                conceptId: conceptoFinalId,
+                conceptName: conceptoFinalNombre,
+                value: Number(valor),
+                date: fecha,
+                category: categoriaFinal,
+                subType: subTipoFinal
+            }
+
+            console.log('Enviando payload:', payload)
+
             const response = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: editandoId,
-                    type: tipo,
-                    conceptId: conceptoFinalId,
-                    conceptName: conceptoFinalNombre,
-                    value: Number(valor),
-                    date: fecha,
-                    category: categoriaFinal,
-                    subType: subTipoFinal
-                })
+                body: JSON.stringify(payload)
             })
 
             if (response.ok) {
                 const transaccionActualizada = await response.json()
+                console.log('Transacción actualizada:', transaccionActualizada)
 
                 if (editandoId) {
                     // Actualizar la transacción existente
-                    setTransacciones(transacciones.map(t =>
+                    const nuevasTransacciones = transacciones.map(t =>
                         t.id === editandoId ? transaccionActualizada : t
-                    ))
+                    )
+                    setTransacciones(nuevasTransacciones)
 
-                    // Recalcular totales
-                    const nuevosIngresos = transacciones
-                        .map(t => t.id === editandoId ? transaccionActualizada : t)
+                    // Recalcular totales desde cero con las nuevas transacciones
+                    const nuevosIngresos = nuevasTransacciones
                         .filter(t => t.type === 'INGRESO')
                         .reduce((sum, t) => sum + t.value, 0)
 
-                    const nuevosGastos = transacciones
-                        .map(t => t.id === editandoId ? transaccionActualizada : t)
+                    const nuevosGastos = nuevasTransacciones
                         .filter(t => t.type === 'GASTO')
                         .reduce((sum, t) => sum + t.value, 0)
 
                     setTotalIngresos(nuevosIngresos)
                     setTotalGastos(nuevosGastos)
-
                     setEditandoId(null)
                 } else {
                     // Agregar nueva transacción
                     setTransacciones([transaccionActualizada, ...transacciones])
-
                     if (tipo === 'INGRESO') {
                         setTotalIngresos(totalIngresos + Number(valor))
                     } else {
@@ -215,9 +218,14 @@ export default function TransaccionesClient({
                 setFecha(new Date().toISOString().split('T')[0])
 
                 router.refresh()
+            } else {
+                const errorData = await response.text()
+                console.error('Error en respuesta:', response.status, errorData)
+                alert('Error al guardar la transacción. Revisa la consola para más detalles.')
             }
         } catch (error) {
-            console.error('Error:', error)
+            console.error('Error en fetch:', error)
+            alert('Error de conexión al servidor.')
         }
     }
 
@@ -229,8 +237,6 @@ export default function TransaccionesClient({
         setValor(transaccion.value.toString())
         setFecha(transaccion.date)
         setMostrarFormNuevoConcepto(false)
-
-        // Scroll suave al formulario
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
@@ -243,7 +249,6 @@ export default function TransaccionesClient({
             })
 
             if (response.ok) {
-                // Obtener la transacción a eliminar para ajustar totales
                 const transaccionEliminada = transacciones.find(t => t.id === id)
 
                 if (transaccionEliminada) {
@@ -256,7 +261,6 @@ export default function TransaccionesClient({
 
                 setTransacciones(transacciones.filter(t => t.id !== id))
 
-                // Si estábamos editando esta transacción, cancelar edición
                 if (editandoId === id) {
                     setEditandoId(null)
                     setConceptoId('')
@@ -265,9 +269,12 @@ export default function TransaccionesClient({
                 }
 
                 router.refresh()
+            } else {
+                alert('Error al eliminar la transacción')
             }
         } catch (error) {
             console.error('Error:', error)
+            alert('Error de conexión al servidor.')
         }
     }
 
