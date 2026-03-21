@@ -65,6 +65,8 @@ export default function Home() {
           <div className="mt-16 md:mt-20">
             <div className="inline-flex flex-wrap justify-center gap-4 md:gap-8 p-6 md:p-8 bg-white/50 backdrop-blur-sm rounded-3xl">
 
+
+
             </div>
           </div>
 
