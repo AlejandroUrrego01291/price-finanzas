@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 
 type DebtPayment = {
@@ -61,16 +61,7 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
 
             if (response.ok) {
                 const nuevaDeuda = await response.json()
-                const deudaConvertida = {
-                    ...nuevaDeuda,
-                    startDate: nuevaDeuda.startDate.toISOString().split('T')[0],
-                    payments: nuevaDeuda.payments.map((p: any) => ({
-                        ...p,
-                        date: p.date.toISOString().split('T')[0]
-                    })),
-                    saldoActual: nuevaDeuda.initialAmount
-                }
-                setDeudas([deudaConvertida, ...deudas])
+                setDeudas([nuevaDeuda, ...deudas])
                 setTotalDeudas(totalDeudas + Number(formData.initialAmount))
                 setFormData({
                     concept: '',
@@ -99,27 +90,8 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
             })
 
             if (response.ok) {
-                const resultado = await response.json()
-                const deudaActualizada = resultado.deuda
-
-                setDeudas(deudas.map(d => d.id === debtId ? {
-                    ...deudaActualizada,
-                    startDate: deudaActualizada.startDate.toISOString().split('T')[0],
-                    payments: deudaActualizada.payments.map((p: any) => ({
-                        ...p,
-                        date: p.date.toISOString().split('T')[0]
-                    })),
-                    saldoActual: deudaActualizada.payments[0]?.remainingBalance ?? deudaActualizada.initialAmount
-                } : d))
-
-                const nuevoTotalDeudas = deudas.reduce((sum, d) => {
-                    if (d.id === debtId) {
-                        return sum + (deudaActualizada.payments[0]?.remainingBalance ?? deudaActualizada.initialAmount)
-                    }
-                    return sum + d.saldoActual
-                }, 0)
-                setTotalDeudas(nuevoTotalDeudas)
-
+                const deudaActualizada = await response.json()
+                setDeudas(deudas.map(d => d.id === debtId ? deudaActualizada : d))
                 router.refresh()
             }
         } catch (error) {
@@ -128,14 +100,18 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
     }
 
     const calcularTiempoRestante = (deuda: Debt) => {
-        const saldoActual = deuda.saldoActual
+        const ultimoPago = deuda.payments[0]
+        const saldoActual = ultimoPago?.remainingBalance ?? deuda.initialAmount
+
         if (saldoActual <= 0) return { meses: 0, fecha: 'Pagada' }
 
+        // Calcular cuántos meses tomando en cuenta intereses
         let saldo = saldoActual
         let meses = 0
-        const fechaProyeccion = new Date()
+        const fechaActual = new Date()
+        const fechaProyeccion = new Date(fechaActual)
 
-        while (saldo > 0 && meses < 120) {
+        while (saldo > 0 && meses < 120) { // Límite de 10 años
             const interes = (saldo * deuda.interestRate) / 100
             const abono = Math.min(deuda.monthlyPayment, saldo + interes)
             saldo = saldo + interes - abono
@@ -143,7 +119,10 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
             fechaProyeccion.setMonth(fechaProyeccion.getMonth() + 1)
         }
 
-        return { meses, fecha: fechaProyeccion.toLocaleDateString('es-CO') }
+        return {
+            meses,
+            fecha: fechaProyeccion.toLocaleDateString('es-CO')
+        }
     }
 
     const formatearMoneda = (valor: number) => {
@@ -164,21 +143,25 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+            {/* Navbar moderno con efecto glassmorphism - MISMO ESTILO QUE EL DASHBOARD */}
             <nav className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-20 items-center">
+                        {/* Logo con gradiente */}
                         <div className="flex items-center">
-                            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                                 Mis finanzas
                             </h1>
                             <span className="ml-3 text-sm font-medium text-gray-600 hidden md:inline-block">
-                                Deudas
+                                Administrar Conceptos
                             </span>
                         </div>
+
+                        {/* Botón de volver con el mismo estilo de los botones de navegación */}
                         <div className="flex items-center">
                             <button
                                 onClick={() => router.push('/dashboard')}
-                                className="px-4 py-2 md:px-5 md:py-2.5 text-sm font-medium text-gray-700 hover:text-white border-2 border-gray-300 rounded-full hover:bg-gray-600 hover:border-gray-600 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
+                                className="px-5 py-2.5 text-sm font-medium text-gray-700 hover:text-white border-2 border-gray-300 rounded-full hover:bg-gray-600 hover:border-gray-600 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
                             >
                                 <span>←</span>
                                 <span className="hidden md:inline">Volver al Dashboard</span>
@@ -189,8 +172,9 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
             </nav>
 
             <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                {/* Botón para nueva deuda */}
                 <div className="mb-6 flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-gray-800">Mis Deudas</h2>
+                    <h2 className="text-subtitle text-2xl">Mis Deudas</h2>
                     <button
                         onClick={() => setShowForm(!showForm)}
                         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
@@ -199,13 +183,14 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                     </button>
                 </div>
 
+                {/* Formulario nueva deuda */}
                 {showForm && (
                     <div className="bg-white shadow rounded-lg p-6 mb-6">
-                        <h3 className="text-lg font-medium mb-4">Registrar Nueva Deuda</h3>
+                        <h3 className="text-subtitle text-lg mb-4">Registrar Nueva Deuda</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Concepto</label>
+                                    <label className="block text-body text-sm font-medium">Concepto</label>
                                     <input
                                         type="text"
                                         value={formData.concept}
@@ -216,7 +201,7 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Saldo Inicial</label>
+                                    <label className="block text-body text-sm font-medium">Saldo Inicial</label>
                                     <input
                                         type="number"
                                         value={formData.initialAmount}
@@ -227,7 +212,7 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Pago Mensual</label>
+                                    <label className="block text-body text-sm font-medium">Pago Mensual</label>
                                     <input
                                         type="number"
                                         value={formData.monthlyPayment}
@@ -238,7 +223,7 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Tasa de Interés (%)</label>
+                                    <label className="block text-body text-sm font-medium">Tasa de Interés (%)</label>
                                     <input
                                         type="number"
                                         value={formData.interestRate}
@@ -250,7 +235,7 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Fecha de Inicio</label>
+                                    <label className="block text-body text-sm font-medium">Fecha de Inicio</label>
                                     <input
                                         type="date"
                                         value={formData.startDate}
@@ -261,7 +246,10 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                 </div>
                             </div>
                             <div className="flex justify-end">
-                                <button type="submit" className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                                <button
+                                    type="submit"
+                                    className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                                >
                                     Guardar Deuda
                                 </button>
                             </div>
@@ -269,32 +257,38 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                     </div>
                 )}
 
+                {/* Resumen total deudas */}
                 <div className="bg-white shadow rounded-lg p-6 mb-6">
-                    <p className="text-sm text-gray-600">Tus deudas suman:</p>
+                    <p className="text-body">Tus deudas suman:</p>
                     <p className="text-3xl font-bold text-red-600">{formatearMoneda(totalDeudas)}</p>
                 </div>
 
+                {/* Listado de deudas */}
                 <div className="space-y-6">
                     {deudas.map((deuda) => {
+                        const ultimoPago = deuda.payments[0]
+                        const saldoActual = ultimoPago?.remainingBalance ?? deuda.initialAmount
                         const tiempoRestante = calcularTiempoRestante(deuda)
 
                         return (
                             <div key={deuda.id} className="bg-white shadow rounded-lg overflow-hidden">
+                                {/* Cabecera de la deuda */}
                                 <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <h3 className="text-lg font-medium text-gray-900">{deuda.concept}</h3>
+                                            <h3 className="text-subtitle text-lg">{deuda.concept}</h3>
                                             <p className="text-sm text-gray-600">
                                                 Inicio: {formatearFecha(deuda.startDate)}
                                             </p>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-sm text-gray-600">Saldo actual</p>
-                                            <p className="text-xl font-bold text-red-600">{formatearMoneda(deuda.saldoActual)}</p>
+                                            <p className="text-xl font-bold text-red-600">{formatearMoneda(saldoActual)}</p>
                                         </div>
                                     </div>
                                 </div>
 
+                                {/* Detalles de la deuda */}
                                 <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-4 gap-4 bg-white">
                                     <div>
                                         <p className="text-xs text-gray-500">Saldo inicial</p>
@@ -318,6 +312,7 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                     </div>
                                 </div>
 
+                                {/* Tabla de pagos */}
                                 {deuda.payments.length > 0 && (
                                     <div className="border-t border-gray-200">
                                         <div className="px-6 py-3 bg-gray-50">
@@ -327,12 +322,12 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                             <table className="min-w-full divide-y divide-gray-200">
                                                 <thead className="bg-gray-50">
                                                     <tr>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Interés</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Abono Capital</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pago Extra</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pago Total</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saldo Final</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Fecha</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Interés</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Abono Capital</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Pago Extra</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Pago Total</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Saldo Final</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -352,11 +347,13 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                     </div>
                                 )}
 
+                                {/* Botón para registrar pago */}
                                 <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
                                     <button
                                         onClick={() => {
                                             const pagoExtra = prompt('¿Deseas hacer un pago extra? (Deja en blanco si no)', '0')
                                             const fecha = prompt('Fecha del pago (YYYY-MM-DD)', new Date().toISOString().split('T')[0])
+
                                             if (fecha) {
                                                 handleRegisterPayment(deuda.id, {
                                                     date: fecha,

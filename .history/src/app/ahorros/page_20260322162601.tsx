@@ -45,8 +45,8 @@ export default async function AhorrosPage() {
                 ...c,
                 date: c.date.toISOString().split('T')[0]
             })),
-            ahorrado,
-            restante
+            ahorrado,    // ← NUEVO: total ahorrado actual
+            restante     // ← NUEVO: cuanto falta para la meta
         }
     })
 

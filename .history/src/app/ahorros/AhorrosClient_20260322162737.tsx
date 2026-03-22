@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 
 type SavingContribution = {
@@ -57,17 +57,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
 
             if (response.ok) {
                 const nuevoAhorro = await response.json()
-                const ahorroConvertido = {
-                    ...nuevoAhorro,
-                    startDate: nuevoAhorro.startDate.toISOString().split('T')[0],
-                    contributions: nuevoAhorro.contributions.map((c: any) => ({
-                        ...c,
-                        date: c.date.toISOString().split('T')[0]
-                    })),
-                    ahorrado: 0,
-                    restante: nuevoAhorro.targetAmount
-                }
-                setAhorros([ahorroConvertido, ...ahorros])
+                setAhorros([nuevoAhorro, ...ahorros])
                 setFormData({
                     concept: '',
                     targetAmount: '',
@@ -94,27 +84,19 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
             })
 
             if (response.ok) {
-                const resultado = await response.json()
-                const ahorroActualizado = resultado.ahorro
+                const ahorroActualizado = await response.json()
+                setAhorros(ahorros.map(a => a.id === savingId ? ahorroActualizado : a))
 
-                setAhorros(ahorros.map(a => a.id === savingId ? {
-                    ...ahorroActualizado,
-                    startDate: ahorroActualizado.startDate.toISOString().split('T')[0],
-                    contributions: ahorroActualizado.contributions.map((c: any) => ({
-                        ...c,
-                        date: c.date.toISOString().split('T')[0]
-                    })),
-                    ahorrado: ahorroActualizado.contributions[0]?.totalSaved ?? 0,
-                    restante: ahorroActualizado.targetAmount - (ahorroActualizado.contributions[0]?.totalSaved ?? 0)
-                } : a))
-
-                const nuevoTotalAhorrado = ahorros.reduce((sum, a) => {
-                    if (a.id === savingId) {
-                        return sum + (ahorroActualizado.contributions[0]?.totalSaved ?? 0)
+                const nuevoTotal = ahorros.reduce((sum, saving) => {
+                    if (saving.id === savingId) {
+                        const ultima = ahorroActualizado.contributions[0]
+                        return sum + (ultima?.totalSaved ?? 0)
+                    } else {
+                        const ultima = saving.contributions[0]
+                        return sum + (ultima?.totalSaved ?? 0)
                     }
-                    return sum + a.ahorrado
                 }, 0)
-                setTotalAhorrado(nuevoTotalAhorrado)
+                setTotalAhorrado(nuevoTotal)
 
                 router.refresh()
             }
@@ -124,12 +106,20 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
     }
 
     const calcularTiempoParaMeta = (ahorro: Saving) => {
+        const ahorrado = ahorro.ahorrado
         const restante = ahorro.restante
+        const progreso = (ahorrado / ahorro.targetAmount) * 100
+
         if (restante <= 0) return { meses: 0, fecha: 'Meta alcanzada' }
+
         const meses = Math.ceil(restante / ahorro.monthlySaving)
         const fecha = new Date()
         fecha.setMonth(fecha.getMonth() + meses)
-        return { meses, fecha: fecha.toLocaleDateString('es-CO') }
+
+        return {
+            meses,
+            fecha: fecha.toLocaleDateString('es-CO')
+        }
     }
 
     const formatearMoneda = (valor: number) => {
@@ -148,27 +138,33 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
         })
     }
 
-    const calcularProgreso = (ahorro: Saving) => {
-        return (ahorro.ahorrado / ahorro.targetAmount) * 100
+    const calcularProgreso = (saving: Saving) => {
+        const ultimaContribucion = saving.contributions[0]
+        const ahorrado = ultimaContribucion?.totalSaved ?? 0
+        return (ahorrado / saving.targetAmount) * 100
     }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+            {/* Navbar moderno con efecto glassmorphism - MISMO ESTILO QUE EL DASHBOARD */}
             <nav className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-20 items-center">
+                        {/* Logo con gradiente */}
                         <div className="flex items-center">
-                            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                                 Mis finanzas
                             </h1>
                             <span className="ml-3 text-sm font-medium text-gray-600 hidden md:inline-block">
-                                Ahorros
+                                Administrar Conceptos
                             </span>
                         </div>
+
+                        {/* Botón de volver con el mismo estilo de los botones de navegación */}
                         <div className="flex items-center">
                             <button
                                 onClick={() => router.push('/dashboard')}
-                                className="px-4 py-2 md:px-5 md:py-2.5 text-sm font-medium text-gray-700 hover:text-white border-2 border-gray-300 rounded-full hover:bg-gray-600 hover:border-gray-600 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
+                                className="px-5 py-2.5 text-sm font-medium text-gray-700 hover:text-white border-2 border-gray-300 rounded-full hover:bg-gray-600 hover:border-gray-600 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
                             >
                                 <span>←</span>
                                 <span className="hidden md:inline">Volver al Dashboard</span>
@@ -179,8 +175,9 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
             </nav>
 
             <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                {/* Botón para nueva meta */}
                 <div className="mb-6 flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-gray-800">Mis Metas de Ahorro</h2>
+                    <h2 className="text-subtitle text-2xl">Mis Metas de Ahorro</h2>
                     <button
                         onClick={() => setShowForm(!showForm)}
                         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
@@ -189,13 +186,14 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                     </button>
                 </div>
 
+                {/* Formulario nueva meta */}
                 {showForm && (
                     <div className="bg-white shadow rounded-lg p-6 mb-6">
-                        <h3 className="text-lg font-medium mb-4">Crear Nueva Meta de Ahorro</h3>
+                        <h3 className="text-subtitle text-lg mb-4">Crear Nueva Meta de Ahorro</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Concepto</label>
+                                    <label className="block text-body text-sm font-medium">Concepto</label>
                                     <input
                                         type="text"
                                         value={formData.concept}
@@ -206,7 +204,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Meta (Valor objetivo)</label>
+                                    <label className="block text-body text-sm font-medium">Meta (Valor objetivo)</label>
                                     <input
                                         type="number"
                                         value={formData.targetAmount}
@@ -217,7 +215,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Ahorro Mensual</label>
+                                    <label className="block text-body text-sm font-medium">Ahorro Mensual</label>
                                     <input
                                         type="number"
                                         value={formData.monthlySaving}
@@ -228,7 +226,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Fecha de Inicio</label>
+                                    <label className="block text-body text-sm font-medium">Fecha de Inicio</label>
                                     <input
                                         type="date"
                                         value={formData.startDate}
@@ -239,7 +237,10 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                 </div>
                             </div>
                             <div className="flex justify-end">
-                                <button type="submit" className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                                <button
+                                    type="submit"
+                                    className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                                >
                                     Guardar Meta
                                 </button>
                             </div>
@@ -247,22 +248,27 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                     </div>
                 )}
 
+                {/* Resumen total ahorrado */}
                 <div className="bg-white shadow rounded-lg p-6 mb-6">
-                    <p className="text-sm text-gray-600">Tus ahorros suman:</p>
+                    <p className="text-body">Tus ahorros suman:</p>
                     <p className="text-3xl font-bold text-green-600">{formatearMoneda(totalAhorrado)}</p>
                 </div>
 
+                {/* Listado de metas de ahorro */}
                 <div className="space-y-6">
                     {ahorros.map((ahorro) => {
+                        const ultimaContribucion = ahorro.contributions[0]
+                        const ahorrado = ultimaContribucion?.totalSaved ?? 0
                         const progreso = calcularProgreso(ahorro)
                         const tiempoMeta = calcularTiempoParaMeta(ahorro)
 
                         return (
                             <div key={ahorro.id} className="bg-white shadow rounded-lg overflow-hidden">
+                                {/* Cabecera de la meta */}
                                 <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <h3 className="text-lg font-medium text-gray-900">{ahorro.concept}</h3>
+                                            <h3 className="text-subtitle text-lg">{ahorro.concept}</h3>
                                             <p className="text-sm text-gray-600">
                                                 Inicio: {formatearFecha(ahorro.startDate)}
                                             </p>
@@ -274,6 +280,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                     </div>
                                 </div>
 
+                                {/* Barra de progreso */}
                                 <div className="px-6 py-4">
                                     <div className="w-full bg-gray-200 rounded-full h-2.5">
                                         <div
@@ -283,6 +290,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                     </div>
                                 </div>
 
+                                {/* Detalles de la meta */}
                                 <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-4 gap-4 bg-white">
                                     <div>
                                         <p className="text-xs text-gray-500">Meta</p>
@@ -290,11 +298,11 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500">Ahorrado</p>
-                                        <p className="text-sm font-medium text-green-600">{formatearMoneda(ahorro.ahorrado)}</p>
+                                        <p className="text-sm font-medium">{formatearMoneda(ahorrado)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500">Faltan</p>
-                                        <p className="text-sm font-medium">{formatearMoneda(ahorro.restante)}</p>
+                                        <p className="text-sm font-medium">{formatearMoneda(ahorro.targetAmount - ahorrado)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500">Tiempo estimado</p>
@@ -306,6 +314,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                     </div>
                                 </div>
 
+                                {/* Tabla de contribuciones */}
                                 {ahorro.contributions.length > 0 && (
                                     <div className="border-t border-gray-200">
                                         <div className="px-6 py-3 bg-gray-50">
@@ -315,10 +324,10 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                             <table className="min-w-full divide-y divide-gray-200">
                                                 <thead className="bg-gray-50">
                                                     <tr>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aporte Mensual</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aporte Extra</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Ahorrado</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Fecha</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Aporte Mensual</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Aporte Extra</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Total Ahorrado</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -336,11 +345,13 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                     </div>
                                 )}
 
+                                {/* Botón para registrar aporte mensual */}
                                 <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
                                     <button
                                         onClick={() => {
                                             const aporteExtra = prompt('¿Deseas hacer un aporte extra? (Deja en blanco si no)', '0')
                                             const fecha = prompt('Fecha del aporte (YYYY-MM-DD)', new Date().toISOString().split('T')[0])
+
                                             if (fecha) {
                                                 handleRegisterContribution(ahorro.id, {
                                                     date: fecha,

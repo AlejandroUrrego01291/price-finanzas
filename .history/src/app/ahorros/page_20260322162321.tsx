@@ -32,7 +32,6 @@ export default async function AhorrosPage() {
     const ahorros = ahorrosDB.map(ahorro => {
         const ultimaContribucion = ahorro.contributions[0]
         const ahorrado = ultimaContribucion?.totalSaved ?? 0
-        const restante = ahorro.targetAmount - ahorrado
 
         return {
             id: ahorro.id,
@@ -45,8 +44,7 @@ export default async function AhorrosPage() {
                 ...c,
                 date: c.date.toISOString().split('T')[0]
             })),
-            ahorrado,
-            restante
+            ahorrado // ← NUEVO: total ahorrado actual
         }
     })
 

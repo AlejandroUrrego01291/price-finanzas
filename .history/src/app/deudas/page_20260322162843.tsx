@@ -43,7 +43,7 @@ export default async function DeudasPage() {
                 ...p,
                 date: p.date.toISOString().split('T')[0]
             })),
-            saldoActual
+            saldoActual  // ← NUEVO
         }
     })
 

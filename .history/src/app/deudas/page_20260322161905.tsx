@@ -10,6 +10,7 @@ export default async function DeudasPage() {
         redirect('/login')
     }
 
+    // Obtener todas las deudas activas del usuario con sus pagos
     const deudasDB = await prisma.debt.findMany({
         where: {
             userId: session.user.id,
@@ -27,6 +28,7 @@ export default async function DeudasPage() {
         }
     })
 
+    // Convertir fechas y calcular saldo actual para cada deuda
     const deudas = deudasDB.map(deuda => {
         const ultimoPago = deuda.payments[0]
         const saldoActual = ultimoPago?.remainingBalance ?? deuda.initialAmount
@@ -43,10 +45,11 @@ export default async function DeudasPage() {
                 ...p,
                 date: p.date.toISOString().split('T')[0]
             })),
-            saldoActual
+            saldoActual // saldo actual calculado
         }
     })
 
+    // Calcular total de deudas usando el SALDO ACTUAL, no el inicial
     const totalDeudas = deudas.reduce((sum, debt) => sum + debt.saldoActual, 0)
 
     return (
