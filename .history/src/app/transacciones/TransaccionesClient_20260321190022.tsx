@@ -21,7 +21,7 @@ type Transaccion = {
     date: string
     category: string | null
     subType: string | null
-    completed: boolean
+    completed: boolean  // ← NUEVO
     concept: Concepto | null
 }
 
@@ -44,10 +44,7 @@ export default function TransaccionesClient({
     const [valor, setValor] = useState('')
     const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0])
     const [mostrarFormNuevoConcepto, setMostrarFormNuevoConcepto] = useState(false)
-    const [mostrarFormNuevoConceptoDetallado, setMostrarFormNuevoConceptoDetallado] = useState(false)
     const [nuevoConcepto, setNuevoConcepto] = useState('')
-    const [nuevaCategoriaConcepto, setNuevaCategoriaConcepto] = useState('')
-    const [nuevoSubtipoConcepto, setNuevoSubtipoConcepto] = useState('CASUAL')
     const [editandoId, setEditandoId] = useState<string | null>(null)
 
     const [transacciones, setTransacciones] = useState<Transaccion[]>(transaccionesIniciales)
@@ -57,6 +54,10 @@ export default function TransaccionesClient({
     const ingresos = transacciones.filter(t => t.type === 'INGRESO')
     const gastos = transacciones.filter(t => t.type === 'GASTO')
     const conceptosFiltrados = conceptos.filter(c => c.type === tipo)
+
+    const [mostrarFormNuevoConceptoDetallado, setMostrarFormNuevoConceptoDetallado] = useState(false)
+    const [nuevaCategoriaConcepto, setNuevaCategoriaConcepto] = useState('')
+    const [nuevoSubtipoConcepto, setNuevoSubtipoConcepto] = useState('CASUAL')
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -71,7 +72,6 @@ export default function TransaccionesClient({
                     setValor(transaccion.value.toString())
                     setFecha(transaccion.date)
                     setMostrarFormNuevoConcepto(false)
-                    setMostrarFormNuevoConceptoDetallado(false)
                     const url = new URL(window.location.href)
                     url.searchParams.delete('edit')
                     window.history.replaceState({}, '', url.toString())
@@ -90,6 +90,25 @@ export default function TransaccionesClient({
         }
     }
 
+    const handleToggleCompleted = async (id: string, currentCompleted: boolean) => {
+        try {
+            const response = await fetch(`/api/transacciones?id=${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ completed: !currentCompleted })
+            })
+
+            if (response.ok) {
+                const transaccionActualizada = await response.json()
+                setTransacciones(transacciones.map(t =>
+                    t.id === id ? transaccionActualizada : t
+                ))
+            }
+        } catch (error) {
+            console.error('Error:', error)
+        }
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
@@ -98,43 +117,32 @@ export default function TransaccionesClient({
         let categoriaFinal = ''
         let subTipoFinal = ''
 
-        // Si es un concepto nuevo, crearlo primero
         if (mostrarFormNuevoConcepto && nuevoConcepto) {
             try {
-                // Determinar categoría y subtipo según si el usuario configuró o no
-                const categoriaConcepto = mostrarFormNuevoConceptoDetallado && nuevaCategoriaConcepto
-                    ? nuevaCategoriaConcepto
-                    : 'No planeados'
-                const subtipoConcepto = mostrarFormNuevoConceptoDetallado && nuevoSubtipoConcepto
-                    ? nuevoSubtipoConcepto
-                    : 'CASUAL'
-
                 const response = await fetch('/api/conceptos', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         type: tipo,
                         name: nuevoConcepto,
-                        category: categoriaConcepto,
-                        subType: subtipoConcepto,
+                        category: 'No planeados',
+                        subType: 'CASUAL',
                         value: valor ? Number(valor) : null,
                         fixedDate: null
                     })
                 })
-
                 if (response.ok) {
                     const conceptoNuevo = await response.json()
                     conceptoFinalId = conceptoNuevo.id
                     conceptoFinalNombre = conceptoNuevo.name
-                    categoriaFinal = conceptoNuevo.category || 'No planeados'
-                    subTipoFinal = conceptoNuevo.subType || 'CASUAL'
+                    categoriaFinal = 'No planeados'
+                    subTipoFinal = 'CASUAL'
                     router.refresh()
                 } else {
-                    console.error('Error creando concepto')
                     return
                 }
             } catch (error) {
-                console.error('Error creando concepto:', error)
+                console.error('Error:', error)
                 return
             }
         } else {
@@ -196,22 +204,15 @@ export default function TransaccionesClient({
                         setTotalGastos(totalGastos + Number(valor))
                     }
                 }
-
-                // Limpiar formulario
                 setConceptoId('')
                 setValor('')
                 setNuevoConcepto('')
-                setNuevaCategoriaConcepto('')
-                setNuevoSubtipoConcepto('CASUAL')
                 setMostrarFormNuevoConcepto(false)
-                setMostrarFormNuevoConceptoDetallado(false)
                 setFecha(new Date().toISOString().split('T')[0])
-
                 router.refresh()
             }
         } catch (error) {
             console.error('Error:', error)
-            alert('Error al guardar la transacción')
         }
     }
 
@@ -222,13 +223,6 @@ export default function TransaccionesClient({
         setValor(transaccion.value.toString())
         setFecha(transaccion.date)
         setMostrarFormNuevoConcepto(false)
-        setMostrarFormNuevoConceptoDetallado(false)
-
-        // Si hay un concepto asociado, cargar sus valores
-        if (transaccion.concept?.value) {
-            setValor(transaccion.concept.value.toString())
-        }
-
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
@@ -251,8 +245,6 @@ export default function TransaccionesClient({
                     setConceptoId('')
                     setValor('')
                     setFecha(new Date().toISOString().split('T')[0])
-                    setMostrarFormNuevoConcepto(false)
-                    setMostrarFormNuevoConceptoDetallado(false)
                 }
                 router.refresh()
             }
@@ -267,10 +259,7 @@ export default function TransaccionesClient({
         setValor('')
         setFecha(new Date().toISOString().split('T')[0])
         setMostrarFormNuevoConcepto(false)
-        setMostrarFormNuevoConceptoDetallado(false)
         setNuevoConcepto('')
-        setNuevaCategoriaConcepto('')
-        setNuevoSubtipoConcepto('CASUAL')
     }
 
     const formatearMoneda = (valor: number) => {
@@ -283,7 +272,6 @@ export default function TransaccionesClient({
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-            {/* Navbar */}
             <nav className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-20 items-center">
@@ -292,7 +280,7 @@ export default function TransaccionesClient({
                                 Mis finanzas
                             </h1>
                             <span className="ml-3 text-sm font-medium text-gray-600 hidden md:inline-block">
-                                Transacciones
+                                Registrar Transacción
                             </span>
                         </div>
                         <div className="flex items-center">
@@ -322,16 +310,6 @@ export default function TransaccionesClient({
                                 <div className="flex rounded-md shadow-sm">
                                     <button
                                         type="button"
-                                        onClick={() => setTipo('INGRESO')}
-                                        className={`flex-1 px-3 py-2 text-sm font-medium rounded-l-md border ${tipo === 'INGRESO'
-                                            ? 'bg-green-600 text-white border-green-600'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        Ingreso
-                                    </button>
-                                    <button
-                                        type="button"
                                         onClick={() => setTipo('GASTO')}
                                         className={`flex-1 px-3 py-2 text-sm font-medium rounded-r-md border-t border-r border-b ${tipo === 'GASTO'
                                             ? 'bg-red-600 text-white border-red-600'
@@ -340,6 +318,18 @@ export default function TransaccionesClient({
                                     >
                                         Gasto
                                     </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setTipo('INGRESO')}
+                                        className={`flex-1 px-3 py-2 text-sm font-medium rounded-l-md border ${tipo === 'INGRESO'
+                                            ? 'bg-green-600 text-white border-green-600'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        Ingreso
+                                    </button>
+
                                 </div>
                             </div>
 
@@ -363,82 +353,24 @@ export default function TransaccionesClient({
                                         </select>
                                     </>
                                 ) : (
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="block text-body text-sm font-medium mb-1">Nuevo Concepto</label>
-                                            <input
-                                                type="text"
-                                                value={nuevoConcepto}
-                                                onChange={(e) => setNuevoConcepto(e.target.value)}
-                                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                                                placeholder="Nombre del nuevo concepto"
-                                                required
-                                            />
-                                        </div>
-
-                                        {/* Opción para mostrar formulario detallado */}
-                                        <div className="flex items-center space-x-2">
-                                            <input
-                                                type="checkbox"
-                                                id="detallesConcepto"
-                                                checked={mostrarFormNuevoConceptoDetallado}
-                                                onChange={(e) => setMostrarFormNuevoConceptoDetallado(e.target.checked)}
-                                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                            />
-                                            <label htmlFor="detallesConcepto" className="text-sm text-gray-600">
-                                                Configurar categoría y subtipo ahora
-                                            </label>
-                                        </div>
-
-                                        {mostrarFormNuevoConceptoDetallado && (
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="block text-xs text-gray-500 mb-1">Categoría</label>
-                                                    <select
-                                                        value={nuevaCategoriaConcepto}
-                                                        onChange={(e) => setNuevaCategoriaConcepto(e.target.value)}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                                    >
-                                                        <option value="">Seleccionar categoría</option>
-                                                        <option value="No planeados">No planeados</option>
-                                                        <option value="Hogar">Hogar</option>
-                                                        <option value="Alimentación">Alimentación</option>
-                                                        <option value="Transporte">Transporte</option>
-                                                        <option value="Educación">Educación</option>
-                                                        <option value="Salud">Salud</option>
-                                                        <option value="Entretenimiento">Entretenimiento</option>
-                                                        <option value="Servicios">Servicios</option>
-                                                        <option value="Deudas">Deudas</option>
-                                                        <option value="Ahorro">Ahorro</option>
-                                                        <option value="Telecomunicaciones">Telecomunicaciones</option>
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs text-gray-500 mb-1">Subtipo</label>
-                                                    <select
-                                                        value={nuevoSubtipoConcepto}
-                                                        onChange={(e) => setNuevoSubtipoConcepto(e.target.value)}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                                    >
-                                                        <option value="FIJO">Fijo</option>
-                                                        <option value="VARIABLE">Variable</option>
-                                                        <option value="CASUAL">Casual</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <p className="text-xs text-gray-500">
-                                            {!mostrarFormNuevoConceptoDetallado &&
-                                                'Se asignará categoría "No planeados" y subtipo "Casual". Puedes editarlos después en Conceptos.'}
-                                            {mostrarFormNuevoConceptoDetallado &&
-                                                'Puedes configurar ahora la categoría y subtipo para este concepto.'}
+                                    <>
+                                        <label className="block text-body text-sm font-medium mb-1">Nuevo Concepto</label>
+                                        <input
+                                            type="text"
+                                            value={nuevoConcepto}
+                                            onChange={(e) => setNuevoConcepto(e.target.value)}
+                                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                                            placeholder="Nombre del nuevo concepto"
+                                            required
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Se asignará categoría "No planeados" y subtipo "Casual"
                                         </p>
-                                    </div>
+                                    </>
                                 )}
                             </div>
 
-                            {/* Botón para nuevo concepto */}
+                            {/* Botón nuevo concepto */}
                             <div className="flex items-end">
                                 <button
                                     type="button"
@@ -446,9 +378,6 @@ export default function TransaccionesClient({
                                         setMostrarFormNuevoConcepto(!mostrarFormNuevoConcepto)
                                         setConceptoId('')
                                         setNuevoConcepto('')
-                                        setNuevaCategoriaConcepto('')
-                                        setNuevoSubtipoConcepto('CASUAL')
-                                        setMostrarFormNuevoConceptoDetallado(false)
                                     }}
                                     className="w-full px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
                                 >
@@ -515,7 +444,7 @@ export default function TransaccionesClient({
                     </div>
                 </div>
 
-                {/* Listados */}
+                {/* Listados separados con checkbox */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Ingresos */}
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -532,35 +461,29 @@ export default function TransaccionesClient({
                                     const hoy = new Date()
                                     hoy.setHours(0, 0, 0, 0)
                                     const isFuture = fechaTransaccion > hoy
-                                    const shouldBeChecked = !isFuture
 
                                     return (
                                         <div key={transaccion.id} className="px-4 md:px-6 py-3 md:py-4 flex flex-wrap sm:flex-nowrap justify-between items-center hover:bg-green-50 transition-colors duration-200 group">
                                             <div className="flex items-center space-x-3 flex-1 min-w-[150px]">
                                                 <input
                                                     type="checkbox"
-                                                    checked={shouldBeChecked}
-                                                    onChange={() => { }} // No se puede cambiar por lógica de fecha
-                                                    className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-not-allowed"
-                                                    disabled={true}
+                                                    checked={transaccion.completed}
+                                                    onChange={() => handleToggleCompleted(transaccion.id, transaccion.completed)}
+                                                    className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                                                    disabled={isFuture}
                                                 />
                                                 <div>
-                                                    <p className="text-sm font-medium text-gray-900">
+                                                    <p className={`text-sm font-medium ${transaccion.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                                                         {transaccion.conceptName}
                                                     </p>
                                                     <p className="text-xs text-gray-500">
                                                         {new Date(transaccion.date).toLocaleDateString('es-CO')}
                                                         {isFuture && ' (Futuro)'}
                                                     </p>
-                                                    {transaccion.category && (
-                                                        <p className="text-xs text-gray-400 mt-1">
-                                                            {transaccion.category} • {transaccion.subType}
-                                                        </p>
-                                                    )}
                                                 </div>
                                             </div>
                                             <div className="flex items-center space-x-2 mt-2 sm:mt-0">
-                                                <p className="text-sm font-bold text-[#10B981] bg-green-100 px-2 py-1 rounded-full">
+                                                <p className={`text-sm font-bold ${transaccion.completed ? 'text-gray-500' : 'text-[#10B981]'} bg-green-100 px-2 py-1 rounded-full`}>
                                                     {formatearMoneda(transaccion.value)}
                                                 </p>
                                                 <button
@@ -603,35 +526,29 @@ export default function TransaccionesClient({
                                     const hoy = new Date()
                                     hoy.setHours(0, 0, 0, 0)
                                     const isFuture = fechaTransaccion > hoy
-                                    const shouldBeChecked = !isFuture
 
                                     return (
                                         <div key={transaccion.id} className="px-4 md:px-6 py-3 md:py-4 flex flex-wrap sm:flex-nowrap justify-between items-center hover:bg-red-50 transition-colors duration-200 group">
                                             <div className="flex items-center space-x-3 flex-1 min-w-[150px]">
                                                 <input
                                                     type="checkbox"
-                                                    checked={shouldBeChecked}
-                                                    onChange={() => { }}
-                                                    className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-not-allowed"
-                                                    disabled={true}
+                                                    checked={transaccion.completed}
+                                                    onChange={() => handleToggleCompleted(transaccion.id, transaccion.completed)}
+                                                    className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                                                    disabled={isFuture}
                                                 />
                                                 <div>
-                                                    <p className="text-sm font-medium text-gray-900">
+                                                    <p className={`text-sm font-medium ${transaccion.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                                                         {transaccion.conceptName}
                                                     </p>
                                                     <p className="text-xs text-gray-500">
                                                         {new Date(transaccion.date).toLocaleDateString('es-CO')}
                                                         {isFuture && ' (Futuro)'}
                                                     </p>
-                                                    {transaccion.category && (
-                                                        <p className="text-xs text-gray-400 mt-1">
-                                                            {transaccion.category} • {transaccion.subType}
-                                                        </p>
-                                                    )}
                                                 </div>
                                             </div>
                                             <div className="flex items-center space-x-2 mt-2 sm:mt-0">
-                                                <p className="text-sm font-bold text-[#EF4444] bg-red-100 px-2 py-1 rounded-full">
+                                                <p className={`text-sm font-bold ${transaccion.completed ? 'text-gray-500' : 'text-[#EF4444]'} bg-red-100 px-2 py-1 rounded-full`}>
                                                     {formatearMoneda(transaccion.value)}
                                                 </p>
                                                 <button
