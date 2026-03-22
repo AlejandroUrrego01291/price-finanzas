@@ -28,7 +28,6 @@ type Transaccion = {
 type Props = {
     transacciones: Transaccion[]
     mesesDisponibles: string[]
-    primerNombre: string
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FF6B6B', '#6B66FF']
@@ -53,7 +52,7 @@ const NavButton = ({ href, icon, text, color }: { href: string; icon: string; te
     )
 }
 
-export default function DashboardClient({ transacciones, mesesDisponibles, primerNombre }: Props) {
+export default function DashboardClient({ transacciones, mesesDisponibles }: Props) {
     const router = useRouter()
     const [fechaFiltro, setFechaFiltro] = useState<string>(
         new Date().toISOString().split('T')[0]
@@ -338,13 +337,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles, prime
             </nav>
 
             <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                <div className="mb-6">
-                    <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                        ¡Hola, {primerNombre}! 👋
-                    </h2>
-                    <p className="text-gray-600 mt-1">Aquí tienes un resumen de tus finanzas</p>
-                </div>
-
                 {/* Selector de fecha */}
                 <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between bg-white rounded-2xl shadow-md p-6">
                     <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4 md:mb-0">
