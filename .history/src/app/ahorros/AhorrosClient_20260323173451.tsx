@@ -130,7 +130,6 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
             console.error('Error:', error)
         }
     }
-
     const obtenerAhorrado = (ahorro: Saving) => {
         return ahorro.contributions[0]?.totalSaved ?? 0
     }
