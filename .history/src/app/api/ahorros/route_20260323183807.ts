@@ -104,7 +104,7 @@ export async function POST(request: Request) {
             }
         })
 
-        console.log('Contribuciones después del registro:', metaActualizada?.contributions.length)
+        console.log('Contribuciones después del registro:', metaActualizada.contributions.length)
         console.log('=========================')
 
         return NextResponse.json(metaActualizada)
