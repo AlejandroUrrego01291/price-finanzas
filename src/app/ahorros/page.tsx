@@ -18,9 +18,10 @@ export default async function AhorrosPage() {
         },
         include: {
             contributions: {
-                orderBy: {
-                    date: 'desc'
-                }
+                orderBy: [
+                    { date: 'desc' },
+                    { id: 'desc' }
+                ]
             }
         },
         orderBy: {
