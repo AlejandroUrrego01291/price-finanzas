@@ -76,7 +76,6 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
             alert('Error de conexión al servidor.')
         }
     }
-
     const handleRegisterContribution = async (savingId: string, contributionData: any) => {
         console.log('📌 Iniciando registro de aporte para:', savingId)
 
