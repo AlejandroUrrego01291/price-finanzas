@@ -569,24 +569,19 @@ export default function PrediccionesClient({ transacciones, conceptos, deudas, a
                                     </div>
                                 </div>
                                 <div>
-                                    <h3 className="text-base font-semibold text-gray-800 mb-4">Ingresos vs Egresos por Mes</h3>
+                                    <h3 className="text-base font-semibold text-gray-800 mb-4">Composición de Gastos por Mes</h3>
                                     <div className="h-64">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart
-                                                data={proyeccion.map(m => ({
-                                                    mes: m.mes,
-                                                    Ingresos: m.ingresos,
-                                                    Egresos: m.gastosFijos + m.gastosVariables + m.deudas + m.ahorros
-                                                }))}
-                                                margin={{ top: 10, right: 20, left: 80, bottom: 10 }}
-                                            >
+                                            <BarChart data={proyeccion} margin={{ top: 10, right: 20, left: 80, bottom: 10 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                                 <XAxis dataKey="mes" tick={{ fill: '#6B7280', fontSize: 11 }} />
                                                 <YAxis tickFormatter={(v) => formatearMoneda(v)} tick={{ fill: '#6B7280', fontSize: 11 }} width={90} />
                                                 <Tooltip content={<CustomTooltip />} />
                                                 <Legend />
-                                                <Bar dataKey="Ingresos" fill="#10B981" radius={[4, 4, 0, 0]} />
-                                                <Bar dataKey="Egresos" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                                                <Bar dataKey="gastosFijos" stackId="a" fill="#EF4444" name="Gastos Fijos" />
+                                                <Bar dataKey="gastosVariables" stackId="a" fill="#F97316" name="Gastos Variables" />
+                                                <Bar dataKey="deudas" stackId="a" fill="#8B5CF6" name="Deudas" />
+                                                <Bar dataKey="ahorros" stackId="a" fill="#3B82F6" name="Ahorros" />
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
