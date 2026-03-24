@@ -299,18 +299,14 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                 <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <h3 className="text-lg font-medium text-gray-900" suppressHydrationWarning>
-                                                {ahorro.concept}
-                                            </h3>
+                                            <h3 className="text-lg font-medium text-gray-900">{ahorro.concept}</h3>
                                             <p className="text-sm text-gray-600">
                                                 Inicio: {formatearFecha(ahorro.startDate)}
                                             </p>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-sm text-gray-600">Progreso</p>
-                                            <p className="text-xl font-bold text-green-600" suppressHydrationWarning>
-                                                {progreso.toFixed(1)}%
-                                            </p>
+                                            <p className="text-xl font-bold text-green-600">{progreso.toFixed(1)}%</p>
                                         </div>
                                     </div>
                                 </div>
@@ -331,9 +327,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500">Ahorrado</p>
-                                        <p className="text-sm font-medium text-green-600" suppressHydrationWarning>
-                                            {formatearMoneda(ahorrado)}
-                                        </p>
+                                        <p className="text-sm font-medium text-green-600">{formatearMoneda(ahorrado)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500">Faltan</p>

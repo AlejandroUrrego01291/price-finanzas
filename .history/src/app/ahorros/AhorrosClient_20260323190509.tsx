@@ -308,9 +308,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                         </div>
                                         <div className="text-right">
                                             <p className="text-sm text-gray-600">Progreso</p>
-                                            <p className="text-xl font-bold text-green-600" suppressHydrationWarning>
-                                                {progreso.toFixed(1)}%
-                                            </p>
+                                            <p className="text-xl font-bold text-green-600">{progreso.toFixed(1)}%</p>
                                         </div>
                                     </div>
                                 </div>
@@ -331,9 +329,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500">Ahorrado</p>
-                                        <p className="text-sm font-medium text-green-600" suppressHydrationWarning>
-                                            {formatearMoneda(ahorrado)}
-                                        </p>
+                                        <p className="text-sm font-medium text-green-600">{formatearMoneda(ahorrado)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500">Faltan</p>

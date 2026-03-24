@@ -331,9 +331,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500">Ahorrado</p>
-                                        <p className="text-sm font-medium text-green-600" suppressHydrationWarning>
-                                            {formatearMoneda(ahorrado)}
-                                        </p>
+                                        <p className="text-sm font-medium text-green-600">{formatearMoneda(ahorrado)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500">Faltan</p>
