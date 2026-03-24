@@ -124,6 +124,9 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                 }))
             }
 
+            console.log('📌 ahorroFormateado.contributions[0]:', ahorroFormateado.contributions[0])
+            console.log('📌 totalSaved del primero:', ahorroFormateado.contributions[0]?.totalSaved)
+
             setAhorros(prev => {
                 const nuevosAhorros = prev.map(a =>
                     a.id === ahorroFormateado.id ? ahorroFormateado : a
@@ -131,6 +134,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                 const nuevoTotal = nuevosAhorros.reduce((sum, a) => {
                     return sum + (a.contributions[0]?.totalSaved ?? 0)
                 }, 0)
+                console.log('📌 nuevoTotal calculado:', nuevoTotal)
                 setTotalAhorrado(nuevoTotal)
                 return nuevosAhorros
             })
