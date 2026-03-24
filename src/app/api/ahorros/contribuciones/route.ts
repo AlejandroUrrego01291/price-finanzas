@@ -105,9 +105,10 @@ export async function POST(request: Request) {
             where: { id: saving.id },
             include: {
                 contributions: {
-                    orderBy: {
-                        date: 'desc'
-                    }
+                    orderBy: [
+                        { date: 'desc' },
+                        { id: 'desc' }
+                    ]
                 }
             }
         })
