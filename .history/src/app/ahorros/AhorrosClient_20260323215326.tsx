@@ -85,7 +85,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                 startDate: new Date().toISOString().split('T')[0]
             })
 
-
+            // ... resto del código
         } catch (error) {
             console.error('❌ Error:', error)
             alert('Error de conexión al servidor.')

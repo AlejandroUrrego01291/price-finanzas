@@ -70,22 +70,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
             const nuevoAhorro = await response.json()
             console.log('✅ Meta creada:', nuevoAhorro)
 
-            // Agregar la nueva meta al estado local
-            const nuevoAhorroFormateado = {
-                ...nuevoAhorro,
-                startDate: nuevoAhorro.startDate.split('T')[0],
-                contributions: []
-            }
-            setAhorros(prev => [nuevoAhorroFormateado, ...prev])
-            setShowForm(false)
-            setFormData({
-                concept: '',
-                targetAmount: '',
-                monthlySaving: '',
-                startDate: new Date().toISOString().split('T')[0]
-            })
-
-
+            // ... resto del código
         } catch (error) {
             console.error('❌ Error:', error)
             alert('Error de conexión al servidor.')
