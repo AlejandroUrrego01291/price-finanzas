@@ -5,84 +5,64 @@ import PrediccionesClient from './PrediccionesClient'
 
 export default async function PrediccionesPage() {
     const session = await auth()
+    if (!session?.user?.id) redirect('/login')
 
-    if (!session?.user?.id) {
-        redirect('/login')
-    }
-
-    // Obtener todas las transacciones del último año para análisis
     const haceUnAño = new Date()
     haceUnAño.setFullYear(haceUnAño.getFullYear() - 1)
 
-    const transaccionesDB = await prisma.transaction.findMany({
-        where: {
-            userId: session.user.id,
-            date: {
-                gte: haceUnAño
-            }
-        },
-        orderBy: {
-            date: 'asc'
-        },
-        include: {
-            concept: true
-        }
-    })
+    const [transaccionesDB, conceptosDB, deudasDB, ahorrosDB] = await Promise.all([
+        prisma.transaction.findMany({
+            where: { userId: session.user.id, date: { gte: haceUnAño } },
+            orderBy: { date: 'asc' },
+            include: { concept: true }
+        }),
+        prisma.concept.findMany({
+            where: { userId: session.user.id, isActive: true }
+        }),
+        prisma.debt.findMany({
+            where: { userId: session.user.id, isActive: true },
+            include: { payments: { orderBy: { date: 'desc' }, take: 1 } }
+        }),
+        prisma.saving.findMany({
+            where: { userId: session.user.id, isActive: true },
+            include: { contributions: { orderBy: [{ date: 'desc' }, { id: 'desc' }], take: 1 } }
+        })
+    ])
 
-    // Convertir fechas de Date a string - Versión explícita
     const transacciones = transaccionesDB.map(t => ({
-        id: t.id,
-        type: t.type,
-        conceptName: t.conceptName,
-        value: t.value,
-        date: t.date.toISOString().split('T')[0],  // ← Ahora es string
-        category: t.category,
-        subType: t.subType,
-        createdAt: t.createdAt,
-        userId: t.userId,
-        conceptId: t.conceptId,
+        id: t.id, type: t.type, conceptName: t.conceptName, value: t.value,
+        date: t.date.toISOString().split('T')[0],
+        category: t.category, subType: t.subType,
         concept: t.concept ? {
-            id: t.concept.id,
-            name: t.concept.name,
-            type: t.concept.type,
-            category: t.concept.category,
-            subType: t.concept.subType,
-            value: t.concept.value,
-            fixedDate: t.concept.fixedDate,
-            createdAt: t.concept.createdAt,
-            updatedAt: t.concept.updatedAt,
-            userId: t.concept.userId,
-            isActive: t.concept.isActive
+            id: t.concept.id, name: t.concept.name, type: t.concept.type,
+            category: t.concept.category, subType: t.concept.subType,
+            value: t.concept.value, fixedDate: t.concept.fixedDate
         } : null
     }))
 
-    // Obtener conceptos para análisis de recurrencia
-    const conceptosDB = await prisma.concept.findMany({
-        where: {
-            userId: session.user.id,
-            isActive: true
-        }
-    })
-
-    // Convertir conceptos
     const conceptos = conceptosDB.map(c => ({
-        id: c.id,
-        name: c.name,
-        type: c.type,
-        category: c.category,
-        subType: c.subType,
-        value: c.value,
-        fixedDate: c.fixedDate,
-        createdAt: c.createdAt,
-        updatedAt: c.updatedAt,
-        userId: c.userId,
-        isActive: c.isActive
+        id: c.id, name: c.name, type: c.type, category: c.category,
+        subType: c.subType, value: c.value, fixedDate: c.fixedDate
+    }))
+
+    const deudas = deudasDB.map(d => ({
+        id: d.id, concept: d.concept,
+        monthlyPayment: d.monthlyPayment, initialAmount: d.initialAmount,
+        payments: d.payments.map(p => ({ remainingBalance: p.remainingBalance }))
+    }))
+
+    const ahorros = ahorrosDB.map(a => ({
+        id: a.id, concept: a.concept,
+        monthlySaving: a.monthlySaving, targetAmount: a.targetAmount,
+        contributions: a.contributions.map(c => ({ totalSaved: c.totalSaved }))
     }))
 
     return (
         <PrediccionesClient
             transacciones={transacciones}
             conceptos={conceptos}
+            deudas={deudas}
+            ahorros={ahorros}
         />
     )
 }
