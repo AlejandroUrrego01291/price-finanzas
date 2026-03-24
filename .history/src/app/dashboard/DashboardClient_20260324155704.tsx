@@ -502,201 +502,202 @@ export default function DashboardClient({ transacciones, mesesDisponibles, prime
                         )}
                     </div>
                 </div>
-
-                {/* Detalles con checkbox */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Detalle de Ingresos */}
-                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-                        <div className="px-6 py-5 bg-gradient-to-r from-[#10B981] to-[#059669]">
-                            <h3 className="text-lg font-bold text-white flex items-center">
-                                <span className="mr-2">💰</span>
-                                Detalle de Ingresos
-                            </h3>
-                        </div>
-                        <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
-                            {ingresosConDetalle.length > 0 ? (
-                                ingresosConDetalle.map((transaccion) => {
-                                    const fechaTransaccion = new Date(transaccion.date)
-                                    const hoy = new Date()
-                                    hoy.setHours(0, 0, 0, 0)
-                                    const isFuture = fechaTransaccion > hoy
-                                    // El checkbox debe estar marcado si la fecha es hoy o anterior
-                                    const shouldBeChecked = !isFuture
-
-                                    return (
-                                        <div key={transaccion.id} className="px-6 py-4 hover:bg-green-50 transition-colors duration-200 group">
-                                            <div className="flex justify-between items-start">
-                                                <div className="flex items-center space-x-3 flex-1">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={shouldBeChecked}
-                                                        onChange={() => handleToggleCompleted(transaccion.id, transaccion.completed)}
-                                                        className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
-                                                        disabled={isFuture}
-                                                    />
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center justify-between">
-                                                            <p className="text-sm font-medium text-gray-900">
-                                                                {transaccion.conceptName}
-                                                            </p>
-                                                            <div className="flex items-center space-x-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                                                <button
-                                                                    onClick={() => handleEdit(transaccion.id)}
-                                                                    className="text-blue-600 hover:text-blue-800"
-                                                                    title="Editar"
-                                                                >
-                                                                    ✏️
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDelete(transaccion.id)}
-                                                                    className="text-red-600 hover:text-red-800"
-                                                                    title="Eliminar"
-                                                                >
-                                                                    🗑️
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                        <p className="text-xs text-gray-500">
-                                                            {formatearFecha(transaccion.date)}
-                                                            {isFuture && ' (Futuro)'}
-                                                        </p>
-                                                        {transaccion.category && (
-                                                            <p className="text-xs text-gray-400 mt-1">
-                                                                {transaccion.category} • {transaccion.subType}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <p className="text-sm font-bold text-[#10B981] bg-green-100 px-3 py-1 rounded-full ml-4">
-                                                    {formatearMoneda(transaccion.value)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )
-                                })
-                            ) : (
-                                <p className="px-6 py-12 text-center text-gray-400">No hay ingresos en este período</p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Detalle de Gastos por Categoría - Expandible */}
-                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-                        <div className="px-6 py-5 bg-gradient-to-r from-[#EF4444] to-[#DC2626]">
-                            <h3 className="text-lg font-bold text-white flex items-center">
-                                <span className="mr-2">💸</span>
-                                Gastos por Categoría
-                            </h3>
-                        </div>
-                        <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
-                            {gastosPorCategoriaConDetalle.length > 0 ? (
-                                gastosPorCategoriaConDetalle.map((item) => (
-                                    <div key={item.categoria} className="border-b border-gray-100 last:border-0">
-                                        {/* Cabecera de categoría */}
-                                        <div
-                                            onClick={() => setCategoriaExpandida(
-                                                categoriaExpandida === item.categoria ? null : item.categoria
-                                            )}
-                                            className="px-6 py-4 flex justify-between items-center cursor-pointer hover:bg-red-50 transition-colors duration-200"
-                                        >
-                                            <div className="flex items-center space-x-2">
-                                                <span className="text-gray-800 font-medium">{item.categoria}</span>
-                                                <span className="text-xs text-gray-400">
-                                                    ({item.transacciones.length})
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center space-x-3">
-                                                <span className="font-bold text-[#EF4444] bg-red-100 px-3 py-1 rounded-full">
-                                                    {formatearMoneda(item.total)}
-                                                </span>
-                                                <span className="text-gray-400">
-                                                    {categoriaExpandida === item.categoria ? '▼' : '▶'}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Detalles expandidos */}
-                                        {categoriaExpandida === item.categoria && (
-                                            <div className="bg-gray-50 px-6 py-2 space-y-2">
-                                                {item.transacciones.map((transaccion) => {
-                                                    const fechaTransaccion = new Date(transaccion.date)
-                                                    const hoy = new Date()
-                                                    hoy.setHours(0, 0, 0, 0)
-                                                    const isFuture = fechaTransaccion > hoy
-                                                    // El checkbox debe estar marcado si la fecha es hoy o anterior
-                                                    const shouldBeChecked = !isFuture
-
-                                                    return (
-                                                        <div key={transaccion.id} className="py-2 hover:bg-white transition-colors duration-200 group rounded-lg px-3">
-                                                            <div className="flex justify-between items-start">
-                                                                <div className="flex items-center space-x-3 flex-1">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={shouldBeChecked}
-                                                                        onChange={(e) => {
-                                                                            e.stopPropagation()
-                                                                            handleToggleCompleted(transaccion.id, transaccion.completed)
-                                                                        }}
-                                                                        className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
-                                                                        disabled={isFuture}
-                                                                    />
-                                                                    <div className="flex-1">
-                                                                        <div className="flex items-center justify-between">
-                                                                            <p className="text-sm font-medium text-gray-800">
-                                                                                {transaccion.conceptName}
-                                                                            </p>
-                                                                            <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                                <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation()
-                                                                                        handleEdit(transaccion.id)
-                                                                                    }}
-                                                                                    className="text-blue-600 hover:text-blue-800"
-                                                                                    title="Editar"
-                                                                                >
-                                                                                    ✏️
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation()
-                                                                                        handleDelete(transaccion.id)
-                                                                                    }}
-                                                                                    className="text-red-600 hover:text-red-800"
-                                                                                    title="Eliminar"
-                                                                                >
-                                                                                    🗑️
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                        <p className="text-xs text-gray-500">
-                                                                            {formatearFecha(transaccion.date)}
-                                                                            {isFuture && ' (Futuro)'}
-                                                                        </p>
-                                                                        {transaccion.subType && (
-                                                                            <p className="text-xs text-gray-400 mt-1">
-                                                                                {transaccion.subType}
-                                                                            </p>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                                <p className="text-sm font-bold text-[#EF4444] bg-red-100 px-3 py-1 rounded-full ml-4">
-                                                                    {formatearMoneda(transaccion.value)}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="px-6 py-12 text-center text-gray-400">No hay gastos en este período</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </main>
         </div>
+
+                {/* Detalles con checkbox */ }
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Detalle de Ingresos */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="px-6 py-5 bg-gradient-to-r from-[#10B981] to-[#059669]">
+                <h3 className="text-lg font-bold text-white flex items-center">
+                    <span className="mr-2">💰</span>
+                    Detalle de Ingresos
+                </h3>
+            </div>
+            <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                {ingresosConDetalle.length > 0 ? (
+                    ingresosConDetalle.map((transaccion) => {
+                        const fechaTransaccion = new Date(transaccion.date)
+                        const hoy = new Date()
+                        hoy.setHours(0, 0, 0, 0)
+                        const isFuture = fechaTransaccion > hoy
+                        // El checkbox debe estar marcado si la fecha es hoy o anterior
+                        const shouldBeChecked = !isFuture
+
+                        return (
+                            <div key={transaccion.id} className="px-6 py-4 hover:bg-green-50 transition-colors duration-200 group">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center space-x-3 flex-1">
+                                        <input
+                                            type="checkbox"
+                                            checked={shouldBeChecked}
+                                            onChange={() => handleToggleCompleted(transaccion.id, transaccion.completed)}
+                                            className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                                            disabled={isFuture}
+                                        />
+                                        <div className="flex-1">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-sm font-medium text-gray-900">
+                                                    {transaccion.conceptName}
+                                                </p>
+                                                <div className="flex items-center space-x-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => handleEdit(transaccion.id)}
+                                                        className="text-blue-600 hover:text-blue-800"
+                                                        title="Editar"
+                                                    >
+                                                        ✏️
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(transaccion.id)}
+                                                        className="text-red-600 hover:text-red-800"
+                                                        title="Eliminar"
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-gray-500">
+                                                {formatearFecha(transaccion.date)}
+                                                {isFuture && ' (Futuro)'}
+                                            </p>
+                                            {transaccion.category && (
+                                                <p className="text-xs text-gray-400 mt-1">
+                                                    {transaccion.category} • {transaccion.subType}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <p className="text-sm font-bold text-[#10B981] bg-green-100 px-3 py-1 rounded-full ml-4">
+                                        {formatearMoneda(transaccion.value)}
+                                    </p>
+                                </div>
+                            </div>
+                        )
+                    })
+                ) : (
+                    <p className="px-6 py-12 text-center text-gray-400">No hay ingresos en este período</p>
+                )}
+            </div>
+        </div>
+
+        {/* Detalle de Gastos por Categoría - Expandible */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="px-6 py-5 bg-gradient-to-r from-[#EF4444] to-[#DC2626]">
+                <h3 className="text-lg font-bold text-white flex items-center">
+                    <span className="mr-2">💸</span>
+                    Gastos por Categoría
+                </h3>
+            </div>
+            <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                {gastosPorCategoriaConDetalle.length > 0 ? (
+                    gastosPorCategoriaConDetalle.map((item) => (
+                        <div key={item.categoria} className="border-b border-gray-100 last:border-0">
+                            {/* Cabecera de categoría */}
+                            <div
+                                onClick={() => setCategoriaExpandida(
+                                    categoriaExpandida === item.categoria ? null : item.categoria
+                                )}
+                                className="px-6 py-4 flex justify-between items-center cursor-pointer hover:bg-red-50 transition-colors duration-200"
+                            >
+                                <div className="flex items-center space-x-2">
+                                    <span className="text-gray-800 font-medium">{item.categoria}</span>
+                                    <span className="text-xs text-gray-400">
+                                        ({item.transacciones.length})
+                                    </span>
+                                </div>
+                                <div className="flex items-center space-x-3">
+                                    <span className="font-bold text-[#EF4444] bg-red-100 px-3 py-1 rounded-full">
+                                        {formatearMoneda(item.total)}
+                                    </span>
+                                    <span className="text-gray-400">
+                                        {categoriaExpandida === item.categoria ? '▼' : '▶'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Detalles expandidos */}
+                            {categoriaExpandida === item.categoria && (
+                                <div className="bg-gray-50 px-6 py-2 space-y-2">
+                                    {item.transacciones.map((transaccion) => {
+                                        const fechaTransaccion = new Date(transaccion.date)
+                                        const hoy = new Date()
+                                        hoy.setHours(0, 0, 0, 0)
+                                        const isFuture = fechaTransaccion > hoy
+                                        // El checkbox debe estar marcado si la fecha es hoy o anterior
+                                        const shouldBeChecked = !isFuture
+
+                                        return (
+                                            <div key={transaccion.id} className="py-2 hover:bg-white transition-colors duration-200 group rounded-lg px-3">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex items-center space-x-3 flex-1">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={shouldBeChecked}
+                                                            onChange={(e) => {
+                                                                e.stopPropagation()
+                                                                handleToggleCompleted(transaccion.id, transaccion.completed)
+                                                            }}
+                                                            className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                                                            disabled={isFuture}
+                                                        />
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center justify-between">
+                                                                <p className="text-sm font-medium text-gray-800">
+                                                                    {transaccion.conceptName}
+                                                                </p>
+                                                                <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation()
+                                                                            handleEdit(transaccion.id)
+                                                                        }}
+                                                                        className="text-blue-600 hover:text-blue-800"
+                                                                        title="Editar"
+                                                                    >
+                                                                        ✏️
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation()
+                                                                            handleDelete(transaccion.id)
+                                                                        }}
+                                                                        className="text-red-600 hover:text-red-800"
+                                                                        title="Eliminar"
+                                                                    >
+                                                                        🗑️
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <p className="text-xs text-gray-500">
+                                                                {formatearFecha(transaccion.date)}
+                                                                {isFuture && ' (Futuro)'}
+                                                            </p>
+                                                            {transaccion.subType && (
+                                                                <p className="text-xs text-gray-400 mt-1">
+                                                                    {transaccion.subType}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-sm font-bold text-[#EF4444] bg-red-100 px-3 py-1 rounded-full ml-4">
+                                                        {formatearMoneda(transaccion.value)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    ))
+                ) : (
+                    <p className="px-6 py-12 text-center text-gray-400">No hay gastos en este período</p>
+                )}
+            </div>
+        </div>
+    </div>
+            </main >
+        </div >
     )
 }
