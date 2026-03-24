@@ -146,7 +146,6 @@ export default function DashboardClient({ transacciones, mesesDisponibles, prime
         year: 'numeric', month: 'short', day: 'numeric'
     })
 
-    // Colores para barras de categorías
     const coloresCategorias = [
         'bg-blue-500', 'bg-teal-500', 'bg-yellow-400', 'bg-orange-500',
         'bg-red-400', 'bg-purple-400', 'bg-pink-400', 'bg-indigo-400',
@@ -320,7 +319,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles, prime
                         </h3>
                         {datosGastosPorCategoria.length > 0 ? (
                             <div
-                                className="space-y-3 overflow-y-scroll pr-1"
+                                className="space-y-3 overflow-y-auto pr-1"
                                 style={{ maxHeight: '300px', WebkitOverflowScrolling: 'touch' }}
                             >
                                 {datosGastosPorCategoria.map((item, index) => {
@@ -348,7 +347,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles, prime
                     </div>
                 </div>
 
-                {/* Detalle de transacciones */}
+                {/* Detalle de transacciones - CORREGIDO PARA MÓVIL */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Detalle Ingresos */}
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -358,56 +357,57 @@ export default function DashboardClient({ transacciones, mesesDisponibles, prime
                                 Detalle de Ingresos
                             </h3>
                         </div>
-                        <div
-                            className="divide-y divide-gray-100 overflow-y-scroll"
-                            style={{ maxHeight: '384px', WebkitOverflowScrolling: 'touch' }}
-                        >
-                            {ingresosConDetalle.length > 0 ? (
-                                ingresosConDetalle.map((transaccion) => {
-                                    const fechaTransaccion = new Date(transaccion.date)
-                                    const hoy = new Date()
-                                    hoy.setHours(0, 0, 0, 0)
-                                    const isFuture = fechaTransaccion > hoy
-                                    const shouldBeChecked = !isFuture
+                        <div className="overflow-y-auto" style={{ maxHeight: '384px', WebkitOverflowScrolling: 'touch' }}>
+                            <div className="divide-y divide-gray-100">
+                                {ingresosConDetalle.length > 0 ? (
+                                    ingresosConDetalle.map((transaccion) => {
+                                        const fechaTransaccion = new Date(transaccion.date)
+                                        const hoy = new Date()
+                                        hoy.setHours(0, 0, 0, 0)
+                                        const isFuture = fechaTransaccion > hoy
+                                        const shouldBeChecked = !isFuture
 
-                                    return (
-                                        <div key={transaccion.id} className="px-6 py-4 hover:bg-green-50 transition-colors duration-200 group">
-                                            <div className="flex justify-between items-start">
-                                                <div className="flex items-center space-x-3 flex-1">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={shouldBeChecked}
-                                                        onChange={() => handleToggleCompleted(transaccion.id, transaccion.completed)}
-                                                        className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
-                                                        disabled={isFuture}
-                                                    />
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center justify-between">
-                                                            <p className="text-sm font-medium text-gray-900">{transaccion.conceptName}</p>
-                                                            <div className="flex items-center space-x-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                                                <button onClick={() => handleEdit(transaccion.id)} className="text-blue-600 hover:text-blue-800" title="Editar">✏️</button>
-                                                                <button onClick={() => handleDelete(transaccion.id)} className="text-red-600 hover:text-red-800" title="Eliminar">🗑️</button>
+                                        return (
+                                            <div key={transaccion.id} className="px-4 md:px-6 py-4 hover:bg-green-50 transition-colors duration-200 group">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={shouldBeChecked}
+                                                            onChange={() => handleToggleCompleted(transaccion.id, transaccion.completed)}
+                                                            className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer shrink-0"
+                                                            disabled={isFuture}
+                                                        />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                                                <p className="text-sm font-medium text-gray-900 truncate max-w-[150px] md:max-w-none">
+                                                                    {transaccion.conceptName}
+                                                                </p>
+                                                                <div className="flex items-center space-x-2 shrink-0">
+                                                                    <button onClick={() => handleEdit(transaccion.id)} className="text-blue-600 hover:text-blue-800" title="Editar">✏️</button>
+                                                                    <button onClick={() => handleDelete(transaccion.id)} className="text-red-600 hover:text-red-800" title="Eliminar">🗑️</button>
+                                                                </div>
                                                             </div>
+                                                            <p className="text-xs text-gray-500">
+                                                                {formatearFecha(transaccion.date)}
+                                                                {isFuture && ' (Futuro)'}
+                                                            </p>
+                                                            {transaccion.category && (
+                                                                <p className="text-xs text-gray-400 mt-1 truncate">{transaccion.category} • {transaccion.subType}</p>
+                                                            )}
                                                         </div>
-                                                        <p className="text-xs text-gray-500">
-                                                            {formatearFecha(transaccion.date)}
-                                                            {isFuture && ' (Futuro)'}
-                                                        </p>
-                                                        {transaccion.category && (
-                                                            <p className="text-xs text-gray-400 mt-1">{transaccion.category} • {transaccion.subType}</p>
-                                                        )}
                                                     </div>
+                                                    <p className="text-sm font-bold text-[#10B981] bg-green-100 px-2 md:px-3 py-1 rounded-full shrink-0 ml-2">
+                                                        {formatearMoneda(transaccion.value)}
+                                                    </p>
                                                 </div>
-                                                <p className="text-sm font-bold text-[#10B981] bg-green-100 px-3 py-1 rounded-full ml-4">
-                                                    {formatearMoneda(transaccion.value)}
-                                                </p>
                                             </div>
-                                        </div>
-                                    )
-                                })
-                            ) : (
-                                <p className="px-6 py-12 text-center text-gray-400">No hay ingresos en este período</p>
-                            )}
+                                        )
+                                    })
+                                ) : (
+                                    <p className="px-6 py-12 text-center text-gray-400">No hay ingresos en este período</p>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -419,82 +419,83 @@ export default function DashboardClient({ transacciones, mesesDisponibles, prime
                                 Gastos por Categoría
                             </h3>
                         </div>
-                        <div
-                            className="divide-y divide-gray-100 overflow-y-scroll"
-                            style={{ maxHeight: '384px', WebkitOverflowScrolling: 'touch' }}
-                        >
-                            {gastosPorCategoriaConDetalle.length > 0 ? (
-                                gastosPorCategoriaConDetalle.map((item) => (
-                                    <div key={item.categoria} className="border-b border-gray-100 last:border-0">
-                                        <div
-                                            onClick={() => setCategoriaExpandida(
-                                                categoriaExpandida === item.categoria ? null : item.categoria
-                                            )}
-                                            className="px-6 py-4 flex justify-between items-center cursor-pointer hover:bg-red-50 transition-colors duration-200"
-                                        >
-                                            <div className="flex items-center space-x-2">
-                                                <span className="text-gray-800 font-medium">{item.categoria}</span>
-                                                <span className="text-xs text-gray-400">({item.transacciones.length})</span>
+                        <div className="overflow-y-auto" style={{ maxHeight: '384px', WebkitOverflowScrolling: 'touch' }}>
+                            <div className="divide-y divide-gray-100">
+                                {gastosPorCategoriaConDetalle.length > 0 ? (
+                                    gastosPorCategoriaConDetalle.map((item) => (
+                                        <div key={item.categoria} className="border-b border-gray-100 last:border-0">
+                                            <div
+                                                onClick={() => setCategoriaExpandida(
+                                                    categoriaExpandida === item.categoria ? null : item.categoria
+                                                )}
+                                                className="px-4 md:px-6 py-4 flex justify-between items-center cursor-pointer hover:bg-red-50 transition-colors duration-200"
+                                            >
+                                                <div className="flex items-center space-x-2 min-w-0">
+                                                    <span className="text-gray-800 font-medium truncate">{item.categoria}</span>
+                                                    <span className="text-xs text-gray-400 shrink-0">({item.transacciones.length})</span>
+                                                </div>
+                                                <div className="flex items-center space-x-3 shrink-0">
+                                                    <span className="font-bold text-[#EF4444] bg-red-100 px-2 md:px-3 py-1 rounded-full text-sm">
+                                                        {formatearMoneda(item.total)}
+                                                    </span>
+                                                    <span className="text-gray-400">{categoriaExpandida === item.categoria ? '▼' : '▶'}</span>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center space-x-3">
-                                                <span className="font-bold text-[#EF4444] bg-red-100 px-3 py-1 rounded-full">
-                                                    {formatearMoneda(item.total)}
-                                                </span>
-                                                <span className="text-gray-400">{categoriaExpandida === item.categoria ? '▼' : '▶'}</span>
-                                            </div>
-                                        </div>
 
-                                        {categoriaExpandida === item.categoria && (
-                                            <div className="bg-gray-50 px-6 py-2 space-y-2">
-                                                {item.transacciones.map((transaccion) => {
-                                                    const fechaTransaccion = new Date(transaccion.date)
-                                                    const hoy = new Date()
-                                                    hoy.setHours(0, 0, 0, 0)
-                                                    const isFuture = fechaTransaccion > hoy
-                                                    const shouldBeChecked = !isFuture
+                                            {categoriaExpandida === item.categoria && (
+                                                <div className="bg-gray-50 px-4 md:px-6 py-2 space-y-2">
+                                                    {item.transacciones.map((transaccion) => {
+                                                        const fechaTransaccion = new Date(transaccion.date)
+                                                        const hoy = new Date()
+                                                        hoy.setHours(0, 0, 0, 0)
+                                                        const isFuture = fechaTransaccion > hoy
+                                                        const shouldBeChecked = !isFuture
 
-                                                    return (
-                                                        <div key={transaccion.id} className="py-2 hover:bg-white transition-colors duration-200 group rounded-lg px-3">
-                                                            <div className="flex justify-between items-start">
-                                                                <div className="flex items-center space-x-3 flex-1">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={shouldBeChecked}
-                                                                        onChange={(e) => { e.stopPropagation(); handleToggleCompleted(transaccion.id, transaccion.completed) }}
-                                                                        className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
-                                                                        disabled={isFuture}
-                                                                    />
-                                                                    <div className="flex-1">
-                                                                        <div className="flex items-center justify-between">
-                                                                            <p className="text-sm font-medium text-gray-800">{transaccion.conceptName}</p>
-                                                                            <div className="flex items-center space-x-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                                                                <button onClick={(e) => { e.stopPropagation(); handleEdit(transaccion.id) }} className="text-blue-600 hover:text-blue-800" title="Editar">✏️</button>
-                                                                                <button onClick={(e) => { e.stopPropagation(); handleDelete(transaccion.id) }} className="text-red-600 hover:text-red-800" title="Eliminar">🗑️</button>
+                                                        return (
+                                                            <div key={transaccion.id} className="py-2 hover:bg-white transition-colors duration-200 group rounded-lg px-3">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={shouldBeChecked}
+                                                                            onChange={(e) => { e.stopPropagation(); handleToggleCompleted(transaccion.id, transaccion.completed) }}
+                                                                            className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer shrink-0"
+                                                                            disabled={isFuture}
+                                                                        />
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                                                                <p className="text-sm font-medium text-gray-800 truncate max-w-[120px] md:max-w-none">
+                                                                                    {transaccion.conceptName}
+                                                                                </p>
+                                                                                <div className="flex items-center space-x-2 shrink-0">
+                                                                                    <button onClick={(e) => { e.stopPropagation(); handleEdit(transaccion.id) }} className="text-blue-600 hover:text-blue-800" title="Editar">✏️</button>
+                                                                                    <button onClick={(e) => { e.stopPropagation(); handleDelete(transaccion.id) }} className="text-red-600 hover:text-red-800" title="Eliminar">🗑️</button>
+                                                                                </div>
                                                                             </div>
+                                                                            <p className="text-xs text-gray-500">
+                                                                                {formatearFecha(transaccion.date)}
+                                                                                {isFuture && ' (Futuro)'}
+                                                                            </p>
+                                                                            {transaccion.subType && (
+                                                                                <p className="text-xs text-gray-400 mt-1">{transaccion.subType}</p>
+                                                                            )}
                                                                         </div>
-                                                                        <p className="text-xs text-gray-500">
-                                                                            {formatearFecha(transaccion.date)}
-                                                                            {isFuture && ' (Futuro)'}
-                                                                        </p>
-                                                                        {transaccion.subType && (
-                                                                            <p className="text-xs text-gray-400 mt-1">{transaccion.subType}</p>
-                                                                        )}
                                                                     </div>
+                                                                    <p className="text-sm font-bold text-[#EF4444] bg-red-100 px-2 md:px-3 py-1 rounded-full shrink-0 ml-2">
+                                                                        {formatearMoneda(transaccion.value)}
+                                                                    </p>
                                                                 </div>
-                                                                <p className="text-sm font-bold text-[#EF4444] bg-red-100 px-3 py-1 rounded-full ml-4">
-                                                                    {formatearMoneda(transaccion.value)}
-                                                                </p>
                                                             </div>
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="px-6 py-12 text-center text-gray-400">No hay gastos en este período</p>
-                            )}
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="px-6 py-12 text-center text-gray-400">No hay gastos en este período</p>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
