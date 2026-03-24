@@ -117,7 +117,7 @@ export default function TransaccionesClient({
                         name: nuevoConcepto,
                         category: categoriaConcepto,
                         subType: subtipoConcepto,
-                        value: valor ? Number(valor) : null,
+                        value: null,
                         fixedDate: null
                     })
                 })

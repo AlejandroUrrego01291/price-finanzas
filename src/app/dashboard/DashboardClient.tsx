@@ -543,7 +543,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles, prime
                                                             <p className="text-sm font-medium text-gray-900">
                                                                 {transaccion.conceptName}
                                                             </p>
-                                                            <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <div className="flex items-center space-x-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                                                 <button
                                                                     onClick={() => handleEdit(transaccion.id)}
                                                                     className="text-blue-600 hover:text-blue-800"
