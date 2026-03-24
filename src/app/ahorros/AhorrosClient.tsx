@@ -70,7 +70,6 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
             const nuevoAhorro = await response.json()
             console.log('✅ Meta creada:', nuevoAhorro)
 
-            // Agregar la nueva meta al estado local
             const nuevoAhorroFormateado = {
                 ...nuevoAhorro,
                 startDate: nuevoAhorro.startDate.split('T')[0],
@@ -84,7 +83,6 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                 monthlySaving: '',
                 startDate: new Date().toISOString().split('T')[0]
             })
-
 
         } catch (error) {
             console.error('❌ Error:', error)
@@ -130,21 +128,11 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                 const nuevosAhorros = prev.map(a =>
                     a.id === ahorroFormateado.id ? ahorroFormateado : a
                 )
-                // Calcular el total dentro del mismo callback para leer el estado actualizado
                 const nuevoTotal = nuevosAhorros.reduce((sum, a) => {
                     return sum + (a.contributions[0]?.totalSaved ?? 0)
                 }, 0)
                 setTotalAhorrado(nuevoTotal)
                 return nuevosAhorros
-            })
-
-            // Recalcular el total ahorrado sumando la última contribución de cada meta
-            setAhorros(prev => {
-                const nuevoTotal = prev.reduce((sum, a) => {
-                    return sum + (a.contributions[0]?.totalSaved ?? 0)
-                }, 0)
-                setTotalAhorrado(nuevoTotal)
-                return prev
             })
 
         } catch (error) {
