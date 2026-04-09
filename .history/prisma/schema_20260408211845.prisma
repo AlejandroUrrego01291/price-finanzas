@@ -15,14 +15,13 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
-  // Relaciones 
+  // Relaciones (agrega estas líneas)
   accounts      Account[]
   sessions      Session[]
   concepts      Concept[]
   transactions  Transaction[]
   debts         Debt[]
   savings       Saving[]
-  passwordResetTokens PasswordResetToken[]
 }
 
 model PasswordResetToken {
