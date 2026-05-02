@@ -35,10 +35,6 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
     const [totalDeudas, setTotalDeudas] = useState(totalInicial)
     const [showForm, setShowForm] = useState(false)
     const [editandoDeuda, setEditandoDeuda] = useState<Debt | null>(null)
-    const [showPaymentModal, setShowPaymentModal] = useState(false)
-    const [selectedDebtId, setSelectedDebtId] = useState<string | null>(null)
-    const [paymentAmount, setPaymentAmount] = useState('')
-    const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
     const [formData, setFormData] = useState({
         concept: '',
         initialAmount: '',
@@ -99,49 +95,19 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
         }
     }
 
-    const openPaymentModal = (debtId: string) => {
-        const deuda = deudas.find(d => d.id === debtId)
-        if (!deuda) return
-
-        setSelectedDebtId(debtId)
-        setPaymentAmount(deuda.monthlyPayment.toString())
-        setPaymentDate(new Date().toISOString().split('T')[0])
-        setShowPaymentModal(true)
-    }
-
-    const handleCustomPayment = async () => {
-        if (!selectedDebtId) return
-
-        const amount = Number(paymentAmount)
-        if (amount <= 0) {
-            alert('Ingresa un monto válido')
-            return
-        }
-
+    const handleRegisterPayment = async (debtId: string, paymentData: any) => {
         try {
-            const deuda = deudas.find(d => d.id === selectedDebtId)
-            const pagoMensualEstablecido = deuda?.monthlyPayment || 0
-            const extraPayment = Math.max(0, amount - pagoMensualEstablecido)
-
             const response = await fetch('/api/deudas/pagos', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    debtId: selectedDebtId,
-                    date: paymentDate,
-                    extraPayment: extraPayment
-                })
+                body: JSON.stringify({ debtId, ...paymentData })
             })
 
             if (response.ok) {
-                setShowPaymentModal(false)
                 window.location.reload()
-            } else {
-                alert('Error al registrar el pago')
             }
         } catch (error) {
             console.error('Error:', error)
-            alert('Error de conexión')
         }
     }
 
@@ -360,7 +326,7 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                     </div>
                                 </div>
 
-                                {/* Barra de progreso */}
+                                {/* 🔥 BARRA DE PROGRESO (NUEVA) 🔥 */}
                                 <div className="px-6 py-4">
                                     <div className="flex justify-between text-sm text-gray-600 mb-1">
                                         <span>Pagado: {formatearMoneda(pagado)}</span>
@@ -448,10 +414,19 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                 {/* Botón para registrar pago */}
                                 <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
                                     <button
-                                        onClick={() => openPaymentModal(deuda.id)}
-                                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                                        onClick={() => {
+                                            const pagoExtra = prompt('¿Deseas hacer un pago extra? (Deja en blanco si no)', '0')
+                                            const fecha = prompt('Fecha del pago (YYYY-MM-DD)', new Date().toISOString().split('T')[0])
+                                            if (fecha) {
+                                                handleRegisterPayment(deuda.id, {
+                                                    date: fecha,
+                                                    extraPayment: pagoExtra ? Number(pagoExtra) : 0
+                                                })
+                                            }
+                                        }}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                                     >
-                                        💰 Registrar Pago
+                                        Registrar Pago Mensual
                                     </button>
                                 </div>
                             </div>
@@ -471,61 +446,6 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                     )}
                 </div>
             </main>
-
-            {/* Modal para registrar pago personalizado */}
-            {showPaymentModal && selectedDebtId && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-                        <h3 className="text-xl font-bold text-gray-800 mb-4">Registrar Pago</h3>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Monto a pagar <span className="text-gray-400">(ej: 150,000)</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    value={paymentAmount}
-                                    onChange={(e) => setPaymentAmount(e.target.value)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="Ingresa el monto"
-                                    autoFocus
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha del pago</label>
-                                <input
-                                    type="date"
-                                    value={paymentDate}
-                                    onChange={(e) => setPaymentDate(e.target.value)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700">
-                                💡 Si pagas más que tu cuota mensual ({formatearMoneda(deudas.find(d => d.id === selectedDebtId)?.monthlyPayment || 0)}),
-                                el excedente se aplicará como <strong>pago extra</strong> y reducirá tu saldo más rápido.
-                            </div>
-
-                            <div className="flex justify-end space-x-3 pt-4">
-                                <button
-                                    onClick={() => setShowPaymentModal(false)}
-                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    onClick={handleCustomPayment}
-                                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                                >
-                                    Registrar Pago
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     )
 }
