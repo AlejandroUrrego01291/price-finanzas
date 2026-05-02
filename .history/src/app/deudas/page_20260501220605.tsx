@@ -51,6 +51,13 @@ export default async function DeudasPage() {
     const totalDeudas = deudas.reduce((sum, debt) => sum + debt.saldoActual, 0)
 
     return (
+        <DeudasClient
+            deudas={deudas}
+            totalDeudas={totalDeudas}
+        />
+    )
+
+    return (
         <>
             <NavBar titulo="Administrar Deudas" showBackButton={true} />
             <DeudasClient deudas={deudas} totalDeudas={totalDeudas} />

@@ -96,6 +96,14 @@ export default async function TransaccionesPage() {
         .filter(t => t.type === 'GASTO')
         .reduce((sum, t) => sum + t.value, 0)
 
+    return (
+        <TransaccionesClient
+            conceptos={conceptos}
+            transacciones={transacciones}
+            totalIngresos={totalIngresos}
+            totalGastos={totalGastos}
+        />
+    )
 
     return (
         <>

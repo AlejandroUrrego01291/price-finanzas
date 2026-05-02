@@ -56,6 +56,13 @@ export default async function AhorrosPage() {
     const totalAhorrado = ahorros.reduce((sum, saving) => sum + saving.ahorrado, 0)
 
     return (
+        <AhorrosClient
+            ahorros={ahorros}
+            totalAhorrado={totalAhorrado}
+        />
+    )
+
+    return (
         <>
             <NavBar titulo="Administrar Ahorros" showBackButton={true} />
             <AhorrosClient ahorros={ahorros} totalAhorrado={totalAhorrado} />

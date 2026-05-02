@@ -11,7 +11,7 @@ export default async function PrediccionesPage() {
     const haceUnAño = new Date()
     haceUnAño.setFullYear(haceUnAño.getFullYear() - 1)
 
-    const [transaccionesDB, conceptosDB, deudasDB, ahorrosDB] = await Promise.all([
+    const [transaccionesDB, conceptosDB] = await Promise.all([
         prisma.transaction.findMany({
             where: { userId: session.user.id, date: { gte: haceUnAño } },
             orderBy: { date: 'asc' },
@@ -19,14 +19,6 @@ export default async function PrediccionesPage() {
         }),
         prisma.concept.findMany({
             where: { userId: session.user.id, isActive: true }
-        }),
-        prisma.debt.findMany({
-            where: { userId: session.user.id, isActive: true },
-            include: { payments: { orderBy: { date: 'desc' }, take: 1 } }
-        }),
-        prisma.saving.findMany({
-            where: { userId: session.user.id, isActive: true },
-            include: { contributions: { orderBy: { date: 'desc' }, take: 1 } }
         })
     ])
 
@@ -59,32 +51,12 @@ export default async function PrediccionesPage() {
         fixedDate: c.fixedDate
     }))
 
-    // 🔥 Deudas: enviar solo lo necesario (para que coincida con el tipo esperado)
-    const deudas = deudasDB.map(d => ({
-        id: d.id,
-        concept: d.concept,
-        monthlyPayment: d.monthlyPayment,
-        initialAmount: d.initialAmount,
-        payments: d.payments.map(p => ({ remainingBalance: p.remainingBalance }))
-    }))
-
-    // 🔥 Ahorros: enviar solo lo necesario
-    const ahorros = ahorrosDB.map(a => ({
-        id: a.id,
-        concept: a.concept,
-        monthlySaving: a.monthlySaving,
-        targetAmount: a.targetAmount,
-        contributions: a.contributions.map(c => ({ totalSaved: c.totalSaved }))
-    }))
-
     return (
         <>
             <NavBar titulo="Predicciones Financieras" showBackButton={true} />
             <PrediccionesClient
                 transacciones={transacciones}
                 conceptos={conceptos}
-                deudas={deudas}
-                ahorros={ahorros}
             />
         </>
     )

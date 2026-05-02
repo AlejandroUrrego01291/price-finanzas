@@ -22,6 +22,8 @@ export default async function ConceptosPage() {
         ]
     })
 
+    return <ConceptosClient conceptos={conceptos} />
+
     return (
         <>
             <NavBar titulo="Administrar Conceptos" showBackButton={true} />
