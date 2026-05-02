@@ -106,7 +106,8 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
         try {
             const response = await fetch(`/api/ahorros?id=${id}`, { method: 'DELETE' })
             if (response.ok) {
-                window.location.reload()
+                setAhorros(ahorros.filter(a => a.id !== id))
+                router.refresh()
             }
         } catch (error) {
             console.error('Error:', error)
@@ -134,7 +135,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
         try {
             const response = await fetch(`/api/ahorros/contribuciones?savingId=${savingId}&contributionId=${contributionId}`, { method: 'DELETE' })
             if (response.ok) {
-                window.location.reload()
+                router.refresh()
             }
         } catch (error) {
             console.error('Error:', error)

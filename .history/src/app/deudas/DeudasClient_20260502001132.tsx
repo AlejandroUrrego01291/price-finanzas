@@ -3,39 +3,43 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-type SavingContribution = {
+type DebtPayment = {
     id: string
     date: string
-    amount: number
-    extraAmount: number | null
-    totalSaved: number
+    paidAmount: number
+    interestPaid: number
+    capitalPaid: number
+    extraPayment: number | null
+    remainingBalance: number
 }
 
-type Saving = {
+type Debt = {
     id: string
     concept: string
-    targetAmount: number
-    monthlySaving: number
+    initialAmount: number
+    monthlyPayment: number
+    interestRate: number
     startDate: string
     isActive: boolean
-    contributions: SavingContribution[]
+    payments: DebtPayment[]
 }
 
 type Props = {
-    ahorros: Saving[]
-    totalAhorrado: number
+    deudas: Debt[]
+    totalDeudas: number
 }
 
-export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado: totalInicial }: Props) {
+export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: totalInicial }: Props) {
     const router = useRouter()
-    const [ahorros, setAhorros] = useState<Saving[]>(ahorrosIniciales)
-    const [totalAhorrado, setTotalAhorrado] = useState(totalInicial)
+    const [deudas, setDeudas] = useState<Debt[]>(deudasIniciales)
+    const [totalDeudas, setTotalDeudas] = useState(totalInicial)
     const [showForm, setShowForm] = useState(false)
-    const [editandoAhorro, setEditandoAhorro] = useState<Saving | null>(null)
+    const [editandoDeuda, setEditandoDeuda] = useState<Debt | null>(null)
     const [formData, setFormData] = useState({
         concept: '',
-        targetAmount: '',
-        monthlySaving: '',
+        initialAmount: '',
+        monthlyPayment: '',
+        interestRate: '',
         startDate: new Date().toISOString().split('T')[0]
     })
 
@@ -43,44 +47,43 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
         e.preventDefault()
 
         try {
-            const url = editandoAhorro ? `/api/ahorros?id=${editandoAhorro.id}` : '/api/ahorros'
-            const method = editandoAhorro ? 'PUT' : 'POST'
+            const url = editandoDeuda ? `/api/deudas?id=${editandoDeuda.id}` : '/api/deudas'
+            const method = editandoDeuda ? 'PUT' : 'POST'
 
             const response = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     concept: formData.concept,
-                    targetAmount: Number(formData.targetAmount),
-                    monthlySaving: Number(formData.monthlySaving),
+                    initialAmount: Number(formData.initialAmount),
+                    monthlyPayment: Number(formData.monthlyPayment),
+                    interestRate: Number(formData.interestRate),
                     startDate: formData.startDate
                 })
             })
 
             if (response.ok) {
-                if (editandoAhorro) {
+                if (editandoDeuda) {
                     router.refresh()
                 } else {
-                    const nuevoAhorro = await response.json()
-                    const ahorroConvertido = {
-                        id: nuevoAhorro.id,
-                        concept: nuevoAhorro.concept,
-                        targetAmount: nuevoAhorro.targetAmount,
-                        monthlySaving: nuevoAhorro.monthlySaving,
-                        startDate: new Date(nuevoAhorro.startDate).toISOString().split('T')[0],
-                        isActive: nuevoAhorro.isActive,
-                        contributions: []
+                    const nuevaDeuda = await response.json()
+                    const deudaConvertida = {
+                        ...nuevaDeuda,
+                        startDate: new Date(nuevaDeuda.startDate).toISOString().split('T')[0],
+                        payments: []
                     }
-                    setAhorros([ahorroConvertido, ...ahorros])
+                    setDeudas([deudaConvertida, ...deudas])
+                    setTotalDeudas(totalDeudas + Number(formData.initialAmount))
                 }
 
                 setFormData({
                     concept: '',
-                    targetAmount: '',
-                    monthlySaving: '',
+                    initialAmount: '',
+                    monthlyPayment: '',
+                    interestRate: '',
                     startDate: new Date().toISOString().split('T')[0]
                 })
-                setEditandoAhorro(null)
+                setEditandoDeuda(null)
                 setShowForm(false)
                 router.refresh()
             }
@@ -89,22 +92,23 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
         }
     }
 
-    const handleEditSaving = (ahorro: Saving) => {
-        setEditandoAhorro(ahorro)
+    const handleEditDebt = (deuda: Debt) => {
+        setEditandoDeuda(deuda)
         setFormData({
-            concept: ahorro.concept,
-            targetAmount: ahorro.targetAmount.toString(),
-            monthlySaving: ahorro.monthlySaving.toString(),
-            startDate: ahorro.startDate
+            concept: deuda.concept,
+            initialAmount: deuda.initialAmount.toString(),
+            monthlyPayment: deuda.monthlyPayment.toString(),
+            interestRate: deuda.interestRate.toString(),
+            startDate: deuda.startDate
         })
         setShowForm(true)
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
-    const handleDeleteSaving = async (id: string) => {
-        if (!confirm('¿Eliminar esta meta de ahorro y todo su historial?')) return
+    const handleDeleteDebt = async (id: string) => {
+        if (!confirm('¿Eliminar esta deuda y todo su historial de pagos?')) return
         try {
-            const response = await fetch(`/api/ahorros?id=${id}`, { method: 'DELETE' })
+            const response = await fetch(`/api/deudas?id=${id}`, { method: 'DELETE' })
             if (response.ok) {
                 window.location.reload()
             }
@@ -113,15 +117,16 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
         }
     }
 
-    const handleRegisterContribution = async (savingId: string, contributionData: any) => {
+    const handleRegisterPayment = async (debtId: string, paymentData: any) => {
         try {
-            const response = await fetch('/api/ahorros/contribuciones', {
+            const response = await fetch('/api/deudas/pagos', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ savingId, ...contributionData })
+                body: JSON.stringify({ debtId, ...paymentData })
             })
 
             if (response.ok) {
+                // Refrescar la página para mostrar los cambios
                 window.location.reload()
             }
         } catch (error) {
@@ -129,10 +134,10 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
         }
     }
 
-    const handleDeleteContribution = async (savingId: string, contributionId: string) => {
-        if (!confirm('¿Eliminar este aporte? Se recalculará el total automáticamente.')) return
+    const handleDeletePayment = async (debtId: string, paymentId: string) => {
+        if (!confirm('¿Eliminar este pago? Se recalculará el saldo automáticamente.')) return
         try {
-            const response = await fetch(`/api/ahorros/contribuciones?savingId=${savingId}&contributionId=${contributionId}`, { method: 'DELETE' })
+            const response = await fetch(`/api/deudas/pagos?debtId=${debtId}&paymentId=${paymentId}`, { method: 'DELETE' })
             if (response.ok) {
                 window.location.reload()
             }
@@ -142,35 +147,38 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
     }
 
     const handleCancelEdit = () => {
-        setEditandoAhorro(null)
+        setEditandoDeuda(null)
         setFormData({
             concept: '',
-            targetAmount: '',
-            monthlySaving: '',
+            initialAmount: '',
+            monthlyPayment: '',
+            interestRate: '',
             startDate: new Date().toISOString().split('T')[0]
         })
         setShowForm(false)
     }
 
-    const obtenerAhorrado = (ahorro: Saving) => {
-        return ahorro.contributions[0]?.totalSaved ?? 0
+    const obtenerSaldoActual = (deuda: Debt) => {
+        return deuda.payments[0]?.remainingBalance ?? deuda.initialAmount
     }
 
-    const obtenerRestante = (ahorro: Saving) => {
-        return ahorro.targetAmount - obtenerAhorrado(ahorro)
-    }
+    const calcularTiempoRestante = (deuda: Debt) => {
+        const saldoActual = obtenerSaldoActual(deuda)
+        if (saldoActual <= 0) return { meses: 0, fecha: 'Pagada' }
 
-    const calcularProgreso = (ahorro: Saving) => {
-        return (obtenerAhorrado(ahorro) / ahorro.targetAmount) * 100
-    }
+        let saldo = saldoActual
+        let meses = 0
+        const fechaProyeccion = new Date()
 
-    const calcularTiempoParaMeta = (ahorro: Saving) => {
-        const restante = obtenerRestante(ahorro)
-        if (restante <= 0) return { meses: 0, fecha: 'Meta alcanzada' }
-        const meses = Math.ceil(restante / ahorro.monthlySaving)
-        const fecha = new Date()
-        fecha.setMonth(fecha.getMonth() + meses)
-        return { meses, fecha: fecha.toLocaleDateString('es-CO') }
+        while (saldo > 0 && meses < 120) {
+            const interes = (saldo * deuda.interestRate) / 100
+            const abono = Math.min(deuda.monthlyPayment, saldo + interes)
+            saldo = saldo + interes - abono
+            meses++
+            fechaProyeccion.setMonth(fechaProyeccion.getMonth() + 1)
+        }
+
+        return { meses, fecha: fechaProyeccion.toLocaleDateString('es-CO') }
     }
 
     const formatearMoneda = (valor: number) => {
@@ -192,21 +200,21 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
             <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                {/* Botón Nueva Meta */}
+                {/* Botón Nueva Deuda */}
                 <div className="mb-6 flex justify-end">
                     <button
                         onClick={() => setShowForm(!showForm)}
                         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                     >
-                        {showForm ? 'Cancelar' : '+ Nueva Meta'}
+                        {showForm ? 'Cancelar' : '+ Nueva Deuda'}
                     </button>
                 </div>
 
-                {/* Formulario nueva/editar meta */}
+                {/* Formulario nueva/editar deuda */}
                 {showForm && (
                     <div className="bg-white shadow rounded-lg p-6 mb-6">
                         <h3 className="text-lg font-medium mb-4">
-                            {editandoAhorro ? 'Editar Meta de Ahorro' : 'Crear Nueva Meta de Ahorro'}
+                            {editandoDeuda ? 'Editar Deuda' : 'Registrar Nueva Deuda'}
                         </h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -217,29 +225,41 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                         value={formData.concept}
                                         onChange={(e) => setFormData({ ...formData, concept: e.target.value })}
                                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                                        placeholder="Ej: Vacaciones, Emergencias, Casa..."
+                                        placeholder="Ej: Banco, Préstamo personal..."
                                         required
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Meta (Valor objetivo)</label>
+                                    <label className="block text-sm font-medium text-gray-700">Saldo Inicial</label>
                                     <input
                                         type="number"
-                                        value={formData.targetAmount}
-                                        onChange={(e) => setFormData({ ...formData, targetAmount: e.target.value })}
+                                        value={formData.initialAmount}
+                                        onChange={(e) => setFormData({ ...formData, initialAmount: e.target.value })}
                                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
                                         placeholder="0"
                                         required
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Ahorro Mensual</label>
+                                    <label className="block text-sm font-medium text-gray-700">Pago Mensual</label>
                                     <input
                                         type="number"
-                                        value={formData.monthlySaving}
-                                        onChange={(e) => setFormData({ ...formData, monthlySaving: e.target.value })}
+                                        value={formData.monthlyPayment}
+                                        onChange={(e) => setFormData({ ...formData, monthlyPayment: e.target.value })}
                                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
                                         placeholder="0"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Tasa de Interés (%)</label>
+                                    <input
+                                        type="number"
+                                        value={formData.interestRate}
+                                        onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })}
+                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                                        placeholder="0"
+                                        step="0.1"
                                         required
                                     />
                                 </div>
@@ -255,7 +275,7 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                 </div>
                             </div>
                             <div className="flex justify-end space-x-2">
-                                {editandoAhorro && (
+                                {editandoDeuda && (
                                     <button
                                         type="button"
                                         onClick={handleCancelEdit}
@@ -265,124 +285,116 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                     </button>
                                 )}
                                 <button type="submit" className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
-                                    {editandoAhorro ? 'Actualizar' : 'Guardar Meta'}
+                                    {editandoDeuda ? 'Actualizar' : 'Guardar Deuda'}
                                 </button>
                             </div>
                         </form>
                     </div>
                 )}
 
-                {/* Total ahorrado */}
+                {/* Total deudas */}
                 <div className="bg-white shadow rounded-lg p-6 mb-6">
-                    <p className="text-sm text-gray-600">Tus ahorros suman:</p>
-                    <p className="text-3xl font-bold text-green-600">{formatearMoneda(totalAhorrado)}</p>
+                    <p className="text-sm text-gray-600">Tus deudas suman:</p>
+                    <p className="text-3xl font-bold text-red-600">{formatearMoneda(totalDeudas)}</p>
                 </div>
 
-                {/* Listado de metas */}
+                {/* Listado de deudas */}
                 <div className="space-y-6">
-                    {ahorros.map((ahorro) => {
-                        const ahorrado = obtenerAhorrado(ahorro)
-                        const restante = obtenerRestante(ahorro)
-                        const progreso = calcularProgreso(ahorro)
-                        const tiempoMeta = calcularTiempoParaMeta(ahorro)
+                    {deudas.map((deuda) => {
+                        const saldoActual = obtenerSaldoActual(deuda)
+                        const tiempoRestante = calcularTiempoRestante(deuda)
 
                         return (
-                            <div key={ahorro.id} className="bg-white shadow rounded-lg overflow-hidden">
-                                {/* Cabecera de la meta */}
+                            <div key={deuda.id} className="bg-white shadow rounded-lg overflow-hidden">
+                                {/* Cabecera de la deuda */}
                                 <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
                                     <div className="flex justify-between items-start">
                                         <div className="flex-1">
                                             <div className="flex items-center space-x-3">
-                                                <h3 className="text-lg font-medium text-gray-900">{ahorro.concept}</h3>
+                                                <h3 className="text-lg font-medium text-gray-900">{deuda.concept}</h3>
                                                 <button
-                                                    onClick={() => handleEditSaving(ahorro)}
+                                                    onClick={() => handleEditDebt(deuda)}
                                                     className="text-blue-600 hover:text-blue-800 text-sm"
-                                                    title="Editar meta"
+                                                    title="Editar deuda"
                                                 >
                                                     ✏️
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDeleteSaving(ahorro.id)}
+                                                    onClick={() => handleDeleteDebt(deuda.id)}
                                                     className="text-red-600 hover:text-red-800 text-sm"
-                                                    title="Eliminar meta"
+                                                    title="Eliminar deuda"
                                                 >
                                                     🗑️
                                                 </button>
                                             </div>
                                             <p className="text-sm text-gray-600">
-                                                Inicio: {formatearFecha(ahorro.startDate)}
+                                                Inicio: {formatearFecha(deuda.startDate)}
                                             </p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-sm text-gray-600">Progreso</p>
-                                            <p className="text-xl font-bold text-green-600">{progreso.toFixed(1)}%</p>
+                                            <p className="text-sm text-gray-600">Saldo actual</p>
+                                            <p className="text-xl font-bold text-red-600">{formatearMoneda(saldoActual)}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Barra de progreso */}
-                                <div className="px-6 py-4">
-                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                        <div
-                                            className="bg-green-600 h-2.5 rounded-full"
-                                            style={{ width: `${Math.min(progreso, 100)}%` }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Detalles de la meta */}
+                                {/* Detalles de la deuda */}
                                 <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-4 gap-4 bg-white">
                                     <div>
-                                        <p className="text-xs text-gray-500">Meta</p>
-                                        <p className="text-sm font-medium">{formatearMoneda(ahorro.targetAmount)}</p>
+                                        <p className="text-xs text-gray-500">Saldo inicial</p>
+                                        <p className="text-sm font-medium">{formatearMoneda(deuda.initialAmount)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-500">Ahorrado</p>
-                                        <p className="text-sm font-medium text-green-600">{formatearMoneda(ahorrado)}</p>
+                                        <p className="text-xs text-gray-500">Pago mensual</p>
+                                        <p className="text-sm font-medium">{formatearMoneda(deuda.monthlyPayment)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-500">Faltan</p>
-                                        <p className="text-sm font-medium">{formatearMoneda(restante)}</p>
+                                        <p className="text-xs text-gray-500">Interés</p>
+                                        <p className="text-sm font-medium">{deuda.interestRate}% mensual</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-500">Tiempo estimado</p>
+                                        <p className="text-xs text-gray-500">Tiempo restante</p>
                                         <p className="text-sm font-medium">
-                                            {tiempoMeta.meses > 0
-                                                ? `${tiempoMeta.meses} meses (${tiempoMeta.fecha})`
-                                                : tiempoMeta.fecha}
+                                            {tiempoRestante.meses > 0
+                                                ? `${tiempoRestante.meses} meses (${tiempoRestante.fecha})`
+                                                : tiempoRestante.fecha}
                                         </p>
                                     </div>
                                 </div>
 
-                                {/* Tabla de contribuciones */}
-                                {ahorro.contributions.length > 0 && (
+                                {/* Tabla de pagos */}
+                                {deuda.payments.length > 0 && (
                                     <div className="border-t border-gray-200">
                                         <div className="px-6 py-3 bg-gray-50">
-                                            <h4 className="text-sm font-medium text-gray-700">Historial de Aportes</h4>
+                                            <h4 className="text-sm font-medium text-gray-700">Historial de Pagos</h4>
                                         </div>
                                         <div className="overflow-x-auto">
                                             <table className="min-w-full divide-y divide-gray-200">
                                                 <thead className="bg-gray-50">
                                                     <tr>
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aporte Mensual</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aporte Extra</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Ahorrado</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Interés</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Abono Capital</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pago Extra</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pago Total</th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saldo Final</th>
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="bg-white divide-y divide-gray-200">
-                                                    {ahorro.contributions.map((contribucion) => (
-                                                        <tr key={contribucion.id} className="hover:bg-gray-50">
-                                                            <td className="px-6 py-2 text-sm">{formatearFecha(contribucion.date)}</td>
-                                                            <td className="px-6 py-2 text-sm">{formatearMoneda(contribucion.amount)}</td>
-                                                            <td className="px-6 py-2 text-sm">{contribucion.extraAmount ? formatearMoneda(contribucion.extraAmount) : '-'}</td>
-                                                            <td className="px-6 py-2 text-sm font-medium">{formatearMoneda(contribucion.totalSaved)}</td>
+                                                    {deuda.payments.map((pago) => (
+                                                        <tr key={pago.id} className="hover:bg-gray-50">
+                                                            <td className="px-6 py-2 text-sm">{formatearFecha(pago.date)}</td>
+                                                            <td className="px-6 py-2 text-sm">{formatearMoneda(pago.interestPaid)}</td>
+                                                            <td className="px-6 py-2 text-sm">{formatearMoneda(pago.capitalPaid)}</td>
+                                                            <td className="px-6 py-2 text-sm">{pago.extraPayment ? formatearMoneda(pago.extraPayment) : '-'}</td>
+                                                            <td className="px-6 py-2 text-sm font-medium">{formatearMoneda(pago.paidAmount)}</td>
+                                                            <td className="px-6 py-2 text-sm">{formatearMoneda(pago.remainingBalance)}</td>
                                                             <td className="px-6 py-2 text-sm">
                                                                 <button
-                                                                    onClick={() => handleDeleteContribution(ahorro.id, contribucion.id)}
+                                                                    onClick={() => handleDeletePayment(deuda.id, pago.id)}
                                                                     className="text-red-600 hover:text-red-800"
-                                                                    title="Eliminar aporte"
+                                                                    title="Eliminar pago"
                                                                 >
                                                                     🗑️
                                                                 </button>
@@ -395,36 +407,36 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
                                     </div>
                                 )}
 
-                                {/* Botón para registrar aporte */}
+                                {/* Botón para registrar pago */}
                                 <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
                                     <button
                                         onClick={() => {
-                                            const aporteExtra = prompt('¿Deseas hacer un aporte extra? (Deja en blanco si no)', '0')
-                                            const fecha = prompt('Fecha del aporte (YYYY-MM-DD)', new Date().toISOString().split('T')[0])
+                                            const pagoExtra = prompt('¿Deseas hacer un pago extra? (Deja en blanco si no)', '0')
+                                            const fecha = prompt('Fecha del pago (YYYY-MM-DD)', new Date().toISOString().split('T')[0])
                                             if (fecha) {
-                                                handleRegisterContribution(ahorro.id, {
+                                                handleRegisterPayment(deuda.id, {
                                                     date: fecha,
-                                                    extraAmount: aporteExtra ? Number(aporteExtra) : 0
+                                                    extraPayment: pagoExtra ? Number(pagoExtra) : 0
                                                 })
                                             }
                                         }}
-                                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                                     >
-                                        Registrar Aporte Mensual
+                                        Registrar Pago Mensual
                                     </button>
                                 </div>
                             </div>
                         )
                     })}
 
-                    {ahorros.length === 0 && (
+                    {deudas.length === 0 && (
                         <div className="bg-white shadow rounded-lg p-12 text-center">
-                            <p className="text-gray-500">No tienes metas de ahorro</p>
+                            <p className="text-gray-500">No tienes deudas registradas</p>
                             <button
                                 onClick={() => setShowForm(true)}
                                 className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                             >
-                                Crear primera meta
+                                Registrar primera deuda
                             </button>
                         </div>
                     )}

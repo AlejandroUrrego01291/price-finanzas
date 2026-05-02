@@ -106,7 +106,8 @@ export default function AhorrosClient({ ahorros: ahorrosIniciales, totalAhorrado
         try {
             const response = await fetch(`/api/ahorros?id=${id}`, { method: 'DELETE' })
             if (response.ok) {
-                window.location.reload()
+                setAhorros(ahorros.filter(a => a.id !== id))
+                router.refresh()
             }
         } catch (error) {
             console.error('Error:', error)

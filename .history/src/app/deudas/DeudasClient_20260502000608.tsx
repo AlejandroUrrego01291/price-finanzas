@@ -63,7 +63,29 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
             })
 
             if (response.ok) {
-                window.location.reload()
+                if (editandoDeuda) {
+                    router.refresh()
+                } else {
+                    const nuevaDeuda = await response.json()
+                    const deudaConvertida = {
+                        ...nuevaDeuda,
+                        startDate: new Date(nuevaDeuda.startDate).toISOString().split('T')[0],
+                        payments: []
+                    }
+                    setDeudas([deudaConvertida, ...deudas])
+                    setTotalDeudas(totalDeudas + Number(formData.initialAmount))
+                }
+
+                setFormData({
+                    concept: '',
+                    initialAmount: '',
+                    monthlyPayment: '',
+                    interestRate: '',
+                    startDate: new Date().toISOString().split('T')[0]
+                })
+                setEditandoDeuda(null)
+                setShowForm(false)
+                router.refresh()
             }
         } catch (error) {
             console.error('Error:', error)
@@ -88,7 +110,14 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
         try {
             const response = await fetch(`/api/deudas?id=${id}`, { method: 'DELETE' })
             if (response.ok) {
-                window.location.reload()
+                setDeudas(deudas.filter(d => d.id !== id))
+                const nuevoTotal = deudas.reduce((sum, d) => {
+                    if (d.id === id) return sum
+                    const ultimoPago = d.payments[0]
+                    return sum + (ultimoPago?.remainingBalance ?? d.initialAmount)
+                }, 0)
+                setTotalDeudas(nuevoTotal)
+                router.refresh()
             }
         } catch (error) {
             console.error('Error:', error)
@@ -124,6 +153,44 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
         }
     }
 
+    const handleDeleteDebt = async (id: string) => {
+        if (!confirm('¿Eliminar esta deuda y todo su historial de pagos?')) return
+        try {
+            const response = await fetch(`/api/deudas?id=${id}`, { method: 'DELETE' })
+            if (response.ok) {
+                window.location.reload()
+            }
+        } catch (error) {
+            console.error('Error:', error)
+        }
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+
+        try {
+            const url = editandoDeuda ? `/api/deudas?id=${editandoDeuda.id}` : '/api/deudas'
+            const method = editandoDeuda ? 'PUT' : 'POST'
+
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    concept: formData.concept,
+                    initialAmount: Number(formData.initialAmount),
+                    monthlyPayment: Number(formData.monthlyPayment),
+                    interestRate: Number(formData.interestRate),
+                    startDate: formData.startDate
+                })
+            })
+
+            if (response.ok) {
+                window.location.reload()
+            }
+        } catch (error) {
+            console.error('Error:', error)
+        }
+    }
     const handleCancelEdit = () => {
         setEditandoDeuda(null)
         setFormData({
