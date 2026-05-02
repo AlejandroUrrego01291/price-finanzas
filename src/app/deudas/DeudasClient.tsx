@@ -104,7 +104,6 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
             })
 
             if (response.ok) {
-                // Refrescar la página para mostrar los cambios
                 window.location.reload()
             }
         } catch (error) {
@@ -138,6 +137,15 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
 
     const obtenerSaldoActual = (deuda: Debt) => {
         return deuda.payments[0]?.remainingBalance ?? deuda.initialAmount
+    }
+
+    const obtenerPagado = (deuda: Debt) => {
+        return deuda.initialAmount - obtenerSaldoActual(deuda)
+    }
+
+    const obtenerPorcentajePagado = (deuda: Debt) => {
+        if (deuda.initialAmount === 0) return 0
+        return (obtenerPagado(deuda) / deuda.initialAmount) * 100
     }
 
     const calcularTiempoRestante = (deuda: Debt) => {
@@ -280,6 +288,8 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                 <div className="space-y-6">
                     {deudas.map((deuda) => {
                         const saldoActual = obtenerSaldoActual(deuda)
+                        const pagado = obtenerPagado(deuda)
+                        const porcentajePagado = obtenerPorcentajePagado(deuda)
                         const tiempoRestante = calcularTiempoRestante(deuda)
 
                         return (
@@ -310,9 +320,23 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                             </p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-sm text-gray-600">Saldo actual</p>
-                                            <p className="text-xl font-bold text-red-600">{formatearMoneda(saldoActual)}</p>
+                                            <p className="text-sm text-gray-600">Progreso</p>
+                                            <p className="text-xl font-bold text-green-600">{porcentajePagado.toFixed(1)}%</p>
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* 🔥 BARRA DE PROGRESO (NUEVA) 🔥 */}
+                                <div className="px-6 py-4">
+                                    <div className="flex justify-between text-sm text-gray-600 mb-1">
+                                        <span>Pagado: {formatearMoneda(pagado)}</span>
+                                        <span>Pendiente: {formatearMoneda(saldoActual)}</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-3">
+                                        <div
+                                            className="bg-green-600 h-3 rounded-full transition-all duration-500"
+                                            style={{ width: `${Math.min(porcentajePagado, 100)}%` }}
+                                        />
                                     </div>
                                 </div>
 
@@ -347,40 +371,42 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                             <h4 className="text-sm font-medium text-gray-700">Historial de Pagos</h4>
                                         </div>
                                         <div className="overflow-x-auto">
-                                            <table className="min-w-full divide-y divide-gray-200">
-                                                <thead className="bg-gray-50">
-                                                    <tr>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Interés</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Abono Capital</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pago Extra</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pago Total</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saldo Final</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="bg-white divide-y divide-gray-200">
-                                                    {deuda.payments.map((pago) => (
-                                                        <tr key={pago.id} className="hover:bg-gray-50">
-                                                            <td className="px-6 py-2 text-sm">{formatearFecha(pago.date)}</td>
-                                                            <td className="px-6 py-2 text-sm">{formatearMoneda(pago.interestPaid)}</td>
-                                                            <td className="px-6 py-2 text-sm">{formatearMoneda(pago.capitalPaid)}</td>
-                                                            <td className="px-6 py-2 text-sm">{pago.extraPayment ? formatearMoneda(pago.extraPayment) : '-'}</td>
-                                                            <td className="px-6 py-2 text-sm font-medium">{formatearMoneda(pago.paidAmount)}</td>
-                                                            <td className="px-6 py-2 text-sm">{formatearMoneda(pago.remainingBalance)}</td>
-                                                            <td className="px-6 py-2 text-sm">
-                                                                <button
-                                                                    onClick={() => handleDeletePayment(deuda.id, pago.id)}
-                                                                    className="text-red-600 hover:text-red-800"
-                                                                    title="Eliminar pago"
-                                                                >
-                                                                    🗑️
-                                                                </button>
-                                                            </td>
+                                            <div className="max-h-60 overflow-y-auto">
+                                                <table className="min-w-full divide-y divide-gray-200">
+                                                    <thead className="bg-gray-50 sticky top-0">
+                                                        <tr>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Interés</th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Abono Capital</th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pago Extra</th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pago Total</th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saldo Final</th>
+                                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                                                         </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                                    </thead>
+                                                    <tbody className="bg-white divide-y divide-gray-200">
+                                                        {deuda.payments.map((pago) => (
+                                                            <tr key={pago.id} className="hover:bg-gray-50">
+                                                                <td className="px-6 py-2 text-sm">{formatearFecha(pago.date)}</td>
+                                                                <td className="px-6 py-2 text-sm">{formatearMoneda(pago.interestPaid)}</td>
+                                                                <td className="px-6 py-2 text-sm">{formatearMoneda(pago.capitalPaid)}</td>
+                                                                <td className="px-6 py-2 text-sm">{pago.extraPayment ? formatearMoneda(pago.extraPayment) : '-'}</td>
+                                                                <td className="px-6 py-2 text-sm font-medium">{formatearMoneda(pago.paidAmount)}</td>
+                                                                <td className="px-6 py-2 text-sm">{formatearMoneda(pago.remainingBalance)}</td>
+                                                                <td className="px-6 py-2 text-sm">
+                                                                    <button
+                                                                        onClick={() => handleDeletePayment(deuda.id, pago.id)}
+                                                                        className="text-red-600 hover:text-red-800"
+                                                                        title="Eliminar pago"
+                                                                    >
+                                                                        🗑️
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
