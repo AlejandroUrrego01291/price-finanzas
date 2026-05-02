@@ -180,33 +180,9 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-            <nav className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-20 items-center">
-                        <div className="flex items-center">
-                            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                Mis finanzas
-                            </h1>
-                            <span className="ml-3 text-sm font-medium text-gray-600 hidden md:inline-block">
-                                Deudas
-                            </span>
-                        </div>
-                        <div className="flex items-center">
-                            <button
-                                onClick={() => router.push('/dashboard')}
-                                className="px-4 py-2 md:px-5 md:py-2.5 text-sm font-medium text-gray-700 hover:text-white border-2 border-gray-300 rounded-full hover:bg-gray-600 hover:border-gray-600 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
-                            >
-                                <span>←</span>
-                                <span>Volver al Dashboard</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </nav>
 
             <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="mb-6 flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-gray-800">Mis Deudas</h2>
+                <div className="mb-6 flex justify-end">
                     <button
                         onClick={() => setShowForm(!showForm)}
                         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"

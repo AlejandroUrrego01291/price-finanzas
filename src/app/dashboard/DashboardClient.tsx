@@ -170,7 +170,8 @@ export default function DashboardClient({ transacciones, mesesDisponibles, prime
             <nav className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-20 items-center">
-                        <div className="flex items-center">
+                        <div className="flex items-center space-x-2">
+                            <span className="text-2xl md:text-3xl">💰</span>
                             <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                                 Mis finanzas
                             </h1>
