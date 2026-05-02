@@ -3,6 +3,20 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
+// ============================================
+// FUNCIÓN AUXILIAR PARA FORMATEAR FECHA LOCAL
+// ============================================
+const getLocalDateString = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
+
+const getTodayLocal = (): string => {
+    return getLocalDateString(new Date())
+}
+
 type Concepto = {
     id: string
     type: string
@@ -42,7 +56,7 @@ export default function TransaccionesClient({
     const [tipo, setTipo] = useState<'INGRESO' | 'GASTO'>('GASTO')
     const [conceptoId, setConceptoId] = useState('')
     const [valor, setValor] = useState('')
-    const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0])
+    const [fecha, setFecha] = useState(getTodayLocal)
     const [mostrarFormNuevoConcepto, setMostrarFormNuevoConcepto] = useState(false)
     const [mostrarFormNuevoConceptoDetallado, setMostrarFormNuevoConceptoDetallado] = useState(false)
     const [nuevoConcepto, setNuevoConcepto] = useState('')
@@ -58,6 +72,7 @@ export default function TransaccionesClient({
     const gastos = transacciones.filter(t => t.type === 'GASTO')
     const conceptosFiltrados = conceptos.filter(c => c.type === tipo)
 
+    // Leer parámetro de edición de la URL
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search)
@@ -98,10 +113,8 @@ export default function TransaccionesClient({
         let categoriaFinal = ''
         let subTipoFinal = ''
 
-        // Si es un concepto nuevo, crearlo primero
         if (mostrarFormNuevoConcepto && nuevoConcepto) {
             try {
-                // Determinar categoría y subtipo según si el usuario configuró o no
                 const categoriaConcepto = mostrarFormNuevoConceptoDetallado && nuevaCategoriaConcepto
                     ? nuevaCategoriaConcepto
                     : 'No planeados'
@@ -117,7 +130,7 @@ export default function TransaccionesClient({
                         name: nuevoConcepto,
                         category: categoriaConcepto,
                         subType: subtipoConcepto,
-                        value: null,
+                        value: valor ? Number(valor) : null,
                         fixedDate: null
                     })
                 })
@@ -149,10 +162,9 @@ export default function TransaccionesClient({
             const url = editandoId ? `/api/transacciones?id=${editandoId}` : '/api/transacciones'
             const method = editandoId ? 'PUT' : 'POST'
 
-            const fechaTransaccion = new Date(fecha)
-            const hoy = new Date()
-            hoy.setHours(0, 0, 0, 0)
-            const completed = fechaTransaccion <= hoy
+            // Crear fecha en UTC a partir de la fecha local seleccionada
+            const [year, month, day] = fecha.split('-')
+            const fechaUTC = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)))
 
             const payload = {
                 id: editandoId,
@@ -160,10 +172,9 @@ export default function TransaccionesClient({
                 conceptId: conceptoFinalId,
                 conceptName: conceptoFinalNombre,
                 value: Number(valor),
-                date: fecha,
+                date: fechaUTC.toISOString(),
                 category: categoriaFinal,
-                subType: subTipoFinal,
-                completed
+                subType: subTipoFinal
             }
 
             const response = await fetch(url, {
@@ -197,7 +208,6 @@ export default function TransaccionesClient({
                     }
                 }
 
-                // Limpiar formulario
                 setConceptoId('')
                 setValor('')
                 setNuevoConcepto('')
@@ -205,7 +215,7 @@ export default function TransaccionesClient({
                 setNuevoSubtipoConcepto('CASUAL')
                 setMostrarFormNuevoConcepto(false)
                 setMostrarFormNuevoConceptoDetallado(false)
-                setFecha(new Date().toISOString().split('T')[0])
+                setFecha(getTodayLocal())
 
                 router.refresh()
             }
@@ -224,7 +234,6 @@ export default function TransaccionesClient({
         setMostrarFormNuevoConcepto(false)
         setMostrarFormNuevoConceptoDetallado(false)
 
-        // Si hay un concepto asociado, cargar sus valores
         if (transaccion.concept?.value) {
             setValor(transaccion.concept.value.toString())
         }
@@ -250,7 +259,7 @@ export default function TransaccionesClient({
                     setEditandoId(null)
                     setConceptoId('')
                     setValor('')
-                    setFecha(new Date().toISOString().split('T')[0])
+                    setFecha(getTodayLocal())
                     setMostrarFormNuevoConcepto(false)
                     setMostrarFormNuevoConceptoDetallado(false)
                 }
@@ -265,7 +274,7 @@ export default function TransaccionesClient({
         setEditandoId(null)
         setConceptoId('')
         setValor('')
-        setFecha(new Date().toISOString().split('T')[0])
+        setFecha(getTodayLocal())
         setMostrarFormNuevoConcepto(false)
         setMostrarFormNuevoConceptoDetallado(false)
         setNuevoConcepto('')
@@ -281,9 +290,9 @@ export default function TransaccionesClient({
         }).format(valor)
     }
 
+    // ===== INTERFAZ =====
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-            {/* Navbar */}
             <nav className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-20 items-center">
@@ -301,7 +310,7 @@ export default function TransaccionesClient({
                                 className="px-4 py-2 md:px-5 md:py-2.5 text-sm font-medium text-gray-700 hover:text-white border-2 border-gray-300 rounded-full hover:bg-gray-600 hover:border-gray-600 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg flex items-center space-x-2"
                             >
                                 <span>←</span>
-                                <span>Volver al Dashboard</span>
+                                <span className="hidden md:inline">Volver al Dashboard</span>
                             </button>
                         </div>
                     </div>
@@ -343,7 +352,7 @@ export default function TransaccionesClient({
                                 </div>
                             </div>
 
-                            {/* Concepto */}
+                            {/* Concepto o Nuevo Concepto */}
                             <div className="sm:col-span-1 lg:col-span-2">
                                 {!mostrarFormNuevoConcepto ? (
                                     <>
@@ -375,8 +384,6 @@ export default function TransaccionesClient({
                                                 required
                                             />
                                         </div>
-
-                                        {/* Opción para mostrar formulario detallado */}
                                         <div className="flex items-center space-x-2">
                                             <input
                                                 type="checkbox"
@@ -389,7 +396,6 @@ export default function TransaccionesClient({
                                                 Configurar categoría y subtipo ahora
                                             </label>
                                         </div>
-
                                         {mostrarFormNuevoConceptoDetallado && (
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>
@@ -427,7 +433,6 @@ export default function TransaccionesClient({
                                                 </div>
                                             </div>
                                         )}
-
                                         <p className="text-xs text-gray-500">
                                             {!mostrarFormNuevoConceptoDetallado &&
                                                 'Se asignará categoría "No planeados" y subtipo "Casual". Puedes editarlos después en Conceptos.'}
@@ -438,7 +443,7 @@ export default function TransaccionesClient({
                                 )}
                             </div>
 
-                            {/* Botón para nuevo concepto */}
+                            {/* Botón nuevo concepto */}
                             <div className="flex items-end">
                                 <button
                                     type="button"
@@ -527,60 +532,35 @@ export default function TransaccionesClient({
                         </div>
                         <div className="overflow-x-auto">
                             <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
-                                {ingresos.map((transaccion) => {
-                                    const fechaTransaccion = new Date(transaccion.date)
-                                    const hoy = new Date()
-                                    hoy.setHours(0, 0, 0, 0)
-                                    const isFuture = fechaTransaccion > hoy
-                                    const shouldBeChecked = !isFuture
-
-                                    return (
-                                        <div key={transaccion.id} className="px-4 md:px-6 py-3 md:py-4 flex flex-wrap sm:flex-nowrap justify-between items-center hover:bg-green-50 transition-colors duration-200 group">
-                                            <div className="flex items-center space-x-3 flex-1 min-w-[150px]">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={shouldBeChecked}
-                                                    onChange={() => { }} // No se puede cambiar por lógica de fecha
-                                                    className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-not-allowed"
-                                                    disabled={true}
-                                                />
-                                                <div>
-                                                    <p className="text-sm font-medium text-gray-900">
-                                                        {transaccion.conceptName}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500">
-                                                        {new Date(transaccion.date).toLocaleDateString('es-CO')}
-                                                        {isFuture && ' (Futuro)'}
-                                                    </p>
-                                                    {transaccion.category && (
-                                                        <p className="text-xs text-gray-400 mt-1">
-                                                            {transaccion.category} • {transaccion.subType}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center space-x-2 mt-2 sm:mt-0">
-                                                <p className="text-sm font-bold text-[#10B981] bg-green-100 px-2 py-1 rounded-full">
-                                                    {formatearMoneda(transaccion.value)}
-                                                </p>
-                                                <button
-                                                    onClick={() => handleEdit(transaccion)}
-                                                    className="text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    title="Editar"
-                                                >
-                                                    ✏️
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(transaccion.id)}
-                                                    className="text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    title="Eliminar"
-                                                >
-                                                    🗑️
-                                                </button>
-                                            </div>
+                                {ingresos.map((transaccion) => (
+                                    <div key={transaccion.id} className="px-4 md:px-6 py-3 md:py-4 flex flex-wrap sm:flex-nowrap justify-between items-center hover:bg-green-50 transition-colors duration-200 group">
+                                        <div className="flex-1 min-w-[150px]">
+                                            <p className="text-sm font-medium text-gray-900">{transaccion.conceptName}</p>
+                                            <p className="text-xs text-gray-500">
+                                                {new Date(transaccion.date).toLocaleDateString('es-CO')}
+                                            </p>
                                         </div>
-                                    )
-                                })}
+                                        <div className="flex items-center space-x-2 mt-2 sm:mt-0">
+                                            <p className="text-sm font-bold text-[#10B981] bg-green-100 px-2 py-1 rounded-full">
+                                                {formatearMoneda(transaccion.value)}
+                                            </p>
+                                            <button
+                                                onClick={() => handleEdit(transaccion)}
+                                                className="text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="Editar"
+                                            >
+                                                ✏️
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(transaccion.id)}
+                                                className="text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="Eliminar"
+                                            >
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
                                 {ingresos.length === 0 && (
                                     <p className="px-4 md:px-6 py-8 md:py-12 text-center text-gray-400">No hay ingresos este mes</p>
                                 )}
@@ -598,60 +578,35 @@ export default function TransaccionesClient({
                         </div>
                         <div className="overflow-x-auto">
                             <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
-                                {gastos.map((transaccion) => {
-                                    const fechaTransaccion = new Date(transaccion.date)
-                                    const hoy = new Date()
-                                    hoy.setHours(0, 0, 0, 0)
-                                    const isFuture = fechaTransaccion > hoy
-                                    const shouldBeChecked = !isFuture
-
-                                    return (
-                                        <div key={transaccion.id} className="px-4 md:px-6 py-3 md:py-4 flex flex-wrap sm:flex-nowrap justify-between items-center hover:bg-red-50 transition-colors duration-200 group">
-                                            <div className="flex items-center space-x-3 flex-1 min-w-[150px]">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={shouldBeChecked}
-                                                    onChange={() => { }}
-                                                    className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-not-allowed"
-                                                    disabled={true}
-                                                />
-                                                <div>
-                                                    <p className="text-sm font-medium text-gray-900">
-                                                        {transaccion.conceptName}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500">
-                                                        {new Date(transaccion.date).toLocaleDateString('es-CO')}
-                                                        {isFuture && ' (Futuro)'}
-                                                    </p>
-                                                    {transaccion.category && (
-                                                        <p className="text-xs text-gray-400 mt-1">
-                                                            {transaccion.category} • {transaccion.subType}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center space-x-2 mt-2 sm:mt-0">
-                                                <p className="text-sm font-bold text-[#EF4444] bg-red-100 px-2 py-1 rounded-full">
-                                                    {formatearMoneda(transaccion.value)}
-                                                </p>
-                                                <button
-                                                    onClick={() => handleEdit(transaccion)}
-                                                    className="text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    title="Editar"
-                                                >
-                                                    ✏️
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(transaccion.id)}
-                                                    className="text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    title="Eliminar"
-                                                >
-                                                    🗑️
-                                                </button>
-                                            </div>
+                                {gastos.map((transaccion) => (
+                                    <div key={transaccion.id} className="px-4 md:px-6 py-3 md:py-4 flex flex-wrap sm:flex-nowrap justify-between items-center hover:bg-red-50 transition-colors duration-200 group">
+                                        <div className="flex-1 min-w-[150px]">
+                                            <p className="text-sm font-medium text-gray-900">{transaccion.conceptName}</p>
+                                            <p className="text-xs text-gray-500">
+                                                {new Date(transaccion.date).toLocaleDateString('es-CO')}
+                                            </p>
                                         </div>
-                                    )
-                                })}
+                                        <div className="flex items-center space-x-2 mt-2 sm:mt-0">
+                                            <p className="text-sm font-bold text-[#EF4444] bg-red-100 px-2 py-1 rounded-full">
+                                                {formatearMoneda(transaccion.value)}
+                                            </p>
+                                            <button
+                                                onClick={() => handleEdit(transaccion)}
+                                                className="text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="Editar"
+                                            >
+                                                ✏️
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(transaccion.id)}
+                                                className="text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="Eliminar"
+                                            >
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
                                 {gastos.length === 0 && (
                                     <p className="px-4 md:px-6 py-8 md:py-12 text-center text-gray-400">No hay gastos este mes</p>
                                 )}
