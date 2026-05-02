@@ -34,7 +34,6 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
     const [deudas, setDeudas] = useState<Debt[]>(deudasIniciales)
     const [totalDeudas, setTotalDeudas] = useState(totalInicial)
     const [showForm, setShowForm] = useState(false)
-    const [editandoDeuda, setEditandoDeuda] = useState<Debt | null>(null)
     const [formData, setFormData] = useState({
         concept: '',
         initialAmount: '',
@@ -47,11 +46,8 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
         e.preventDefault()
 
         try {
-            const url = editandoDeuda ? `/api/deudas?id=${editandoDeuda.id}` : '/api/deudas'
-            const method = editandoDeuda ? 'PUT' : 'POST'
-
-            const response = await fetch(url, {
-                method,
+            const response = await fetch('/api/deudas', {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     concept: formData.concept,
@@ -63,19 +59,19 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
             })
 
             if (response.ok) {
-                if (editandoDeuda) {
-                    router.refresh()
-                } else {
-                    const nuevaDeuda = await response.json()
-                    const deudaConvertida = {
-                        ...nuevaDeuda,
-                        startDate: new Date(nuevaDeuda.startDate).toISOString().split('T')[0],
-                        payments: []
-                    }
-                    setDeudas([deudaConvertida, ...deudas])
-                    setTotalDeudas(totalDeudas + Number(formData.initialAmount))
+                const nuevaDeuda = await response.json()
+                const deudaConvertida = {
+                    id: nuevaDeuda.id,
+                    concept: nuevaDeuda.concept,
+                    initialAmount: nuevaDeuda.initialAmount,
+                    monthlyPayment: nuevaDeuda.monthlyPayment,
+                    interestRate: nuevaDeuda.interestRate,
+                    startDate: new Date(nuevaDeuda.startDate).toISOString().split('T')[0],
+                    isActive: nuevaDeuda.isActive,
+                    payments: []
                 }
-
+                setDeudas([deudaConvertida, ...deudas])
+                setTotalDeudas(totalDeudas + Number(formData.initialAmount))
                 setFormData({
                     concept: '',
                     initialAmount: '',
@@ -83,40 +79,7 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                     interestRate: '',
                     startDate: new Date().toISOString().split('T')[0]
                 })
-                setEditandoDeuda(null)
                 setShowForm(false)
-                router.refresh()
-            }
-        } catch (error) {
-            console.error('Error:', error)
-        }
-    }
-
-    const handleEditDebt = (deuda: Debt) => {
-        setEditandoDeuda(deuda)
-        setFormData({
-            concept: deuda.concept,
-            initialAmount: deuda.initialAmount.toString(),
-            monthlyPayment: deuda.monthlyPayment.toString(),
-            interestRate: deuda.interestRate.toString(),
-            startDate: deuda.startDate
-        })
-        setShowForm(true)
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-
-    const handleDeleteDebt = async (id: string) => {
-        if (!confirm('¿Eliminar esta deuda y todo su historial de pagos?')) return
-        try {
-            const response = await fetch(`/api/deudas?id=${id}`, { method: 'DELETE' })
-            if (response.ok) {
-                setDeudas(deudas.filter(d => d.id !== id))
-                const nuevoTotal = deudas.reduce((sum, d) => {
-                    if (d.id === id) return sum
-                    const ultimoPago = d.payments[0]
-                    return sum + (ultimoPago?.remainingBalance ?? d.initialAmount)
-                }, 0)
-                setTotalDeudas(nuevoTotal)
                 router.refresh()
             }
         } catch (error) {
@@ -129,39 +92,51 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
             const response = await fetch('/api/deudas/pagos', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ debtId, ...paymentData })
+                body: JSON.stringify({
+                    debtId,
+                    ...paymentData
+                })
             })
 
             if (response.ok) {
+                const deudaActualizada = await response.json()
+
+                // Convertir fechas de los pagos
+                const pagosConvertidos = deudaActualizada.payments.map((p: any) => ({
+                    ...p,
+                    date: new Date(p.date).toISOString().split('T')[0]
+                }))
+
+                const deudaConvertida = {
+                    ...deudaActualizada,
+                    startDate: new Date(deudaActualizada.startDate).toISOString().split('T')[0],
+                    payments: pagosConvertidos
+                }
+
+                // Obtener el nuevo saldo actual de la deuda actualizada
+                const nuevoSaldo = deudaConvertida.payments[0]?.remainingBalance ?? deudaConvertida.initialAmount
+
+                // Actualizar el estado de deudas
+                setDeudas(prev => prev.map(d => d.id === debtId ? deudaConvertida : d))
+
+                // Recalcular el total de deudas sumando todas las deudas
+                setTotalDeudas(prevTotal => {
+                    // Calcular sumando todas las deudas actualizadas
+                    const nuevasDeudas = deudas.map(d =>
+                        d.id === debtId ? deudaConvertida : d
+                    )
+                    const nuevoTotal = nuevasDeudas.reduce((sum, d) => {
+                        const saldo = d.payments[0]?.remainingBalance ?? d.initialAmount
+                        return sum + saldo
+                    }, 0)
+                    return nuevoTotal
+                })
+
                 router.refresh()
             }
         } catch (error) {
             console.error('Error:', error)
         }
-    }
-
-    const handleDeletePayment = async (debtId: string, paymentId: string) => {
-        if (!confirm('¿Eliminar este pago? Se recalculará el saldo automáticamente.')) return
-        try {
-            const response = await fetch(`/api/deudas/pagos?debtId=${debtId}&paymentId=${paymentId}`, { method: 'DELETE' })
-            if (response.ok) {
-                router.refresh()
-            }
-        } catch (error) {
-            console.error('Error:', error)
-        }
-    }
-
-    const handleCancelEdit = () => {
-        setEditandoDeuda(null)
-        setFormData({
-            concept: '',
-            initialAmount: '',
-            monthlyPayment: '',
-            interestRate: '',
-            startDate: new Date().toISOString().split('T')[0]
-        })
-        setShowForm(false)
     }
 
     const obtenerSaldoActual = (deuda: Debt) => {
@@ -205,8 +180,8 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+
             <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                {/* Botón Nueva Deuda */}
                 <div className="mb-6 flex justify-end">
                     <button
                         onClick={() => setShowForm(!showForm)}
@@ -216,12 +191,9 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                     </button>
                 </div>
 
-                {/* Formulario nueva/editar deuda */}
                 {showForm && (
                     <div className="bg-white shadow rounded-lg p-6 mb-6">
-                        <h3 className="text-lg font-medium mb-4">
-                            {editandoDeuda ? 'Editar Deuda' : 'Registrar Nueva Deuda'}
-                        </h3>
+                        <h3 className="text-lg font-medium mb-4">Registrar Nueva Deuda</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -280,31 +252,20 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                     />
                                 </div>
                             </div>
-                            <div className="flex justify-end space-x-2">
-                                {editandoDeuda && (
-                                    <button
-                                        type="button"
-                                        onClick={handleCancelEdit}
-                                        className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
-                                    >
-                                        Cancelar
-                                    </button>
-                                )}
+                            <div className="flex justify-end">
                                 <button type="submit" className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
-                                    {editandoDeuda ? 'Actualizar' : 'Guardar Deuda'}
+                                    Guardar Deuda
                                 </button>
                             </div>
                         </form>
                     </div>
                 )}
 
-                {/* Total deudas */}
                 <div className="bg-white shadow rounded-lg p-6 mb-6">
                     <p className="text-sm text-gray-600">Tus deudas suman:</p>
                     <p className="text-3xl font-bold text-red-600">{formatearMoneda(totalDeudas)}</p>
                 </div>
 
-                {/* Listado de deudas */}
                 <div className="space-y-6">
                     {deudas.map((deuda) => {
                         const saldoActual = obtenerSaldoActual(deuda)
@@ -312,27 +273,10 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
 
                         return (
                             <div key={deuda.id} className="bg-white shadow rounded-lg overflow-hidden">
-                                {/* Cabecera de la deuda */}
                                 <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
                                     <div className="flex justify-between items-start">
-                                        <div className="flex-1">
-                                            <div className="flex items-center space-x-3">
-                                                <h3 className="text-lg font-medium text-gray-900">{deuda.concept}</h3>
-                                                <button
-                                                    onClick={() => handleEditDebt(deuda)}
-                                                    className="text-blue-600 hover:text-blue-800 text-sm"
-                                                    title="Editar deuda"
-                                                >
-                                                    ✏️
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteDebt(deuda.id)}
-                                                    className="text-red-600 hover:text-red-800 text-sm"
-                                                    title="Eliminar deuda"
-                                                >
-                                                    🗑️
-                                                </button>
-                                            </div>
+                                        <div>
+                                            <h3 className="text-lg font-medium text-gray-900">{deuda.concept}</h3>
                                             <p className="text-sm text-gray-600">
                                                 Inicio: {formatearFecha(deuda.startDate)}
                                             </p>
@@ -344,7 +288,6 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                     </div>
                                 </div>
 
-                                {/* Detalles de la deuda */}
                                 <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-4 gap-4 bg-white">
                                     <div>
                                         <p className="text-xs text-gray-500">Saldo inicial</p>
@@ -368,7 +311,6 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                     </div>
                                 </div>
 
-                                {/* Tabla de pagos */}
                                 {deuda.payments.length > 0 && (
                                     <div className="border-t border-gray-200">
                                         <div className="px-6 py-3 bg-gray-50">
@@ -384,7 +326,6 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pago Extra</th>
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pago Total</th>
                                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saldo Final</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -396,15 +337,6 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                                             <td className="px-6 py-2 text-sm">{pago.extraPayment ? formatearMoneda(pago.extraPayment) : '-'}</td>
                                                             <td className="px-6 py-2 text-sm font-medium">{formatearMoneda(pago.paidAmount)}</td>
                                                             <td className="px-6 py-2 text-sm">{formatearMoneda(pago.remainingBalance)}</td>
-                                                            <td className="px-6 py-2 text-sm">
-                                                                <button
-                                                                    onClick={() => handleDeletePayment(deuda.id, pago.id)}
-                                                                    className="text-red-600 hover:text-red-800"
-                                                                    title="Eliminar pago"
-                                                                >
-                                                                    🗑️
-                                                                </button>
-                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -413,7 +345,6 @@ export default function DeudasClient({ deudas: deudasIniciales, totalDeudas: tot
                                     </div>
                                 )}
 
-                                {/* Botón para registrar pago */}
                                 <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
                                     <button
                                         onClick={() => {
