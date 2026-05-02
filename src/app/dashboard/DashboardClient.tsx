@@ -53,18 +53,30 @@ const NavButton = ({ href, icon, text, color }: { href: string; icon: string; te
 
 export default function DashboardClient({ transacciones, mesesDisponibles, primerNombre }: Props) {
     const router = useRouter()
-    const [fechaFiltro, setFechaFiltro] = useState<string>(
-        new Date().toISOString().split('T')[0]
-    )
+
+    // 🔥 Calcular fechas por defecto: primer y último día del mes actual
+    const hoy = new Date()
+    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+    const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
+    const primerDiaStr = primerDiaMes.toISOString().split('T')[0]
+    const ultimoDiaStr = ultimoDiaMes.toISOString().split('T')[0]
+
+    const [fechaDesde, setFechaDesde] = useState<string>(primerDiaStr)
+    const [fechaHasta, setFechaHasta] = useState<string>(ultimoDiaStr)
     const [categoriaExpandida, setCategoriaExpandida] = useState<string | null>(null)
     const [menuAbierto, setMenuAbierto] = useState(false)
 
+    // 🔥 Filtrar transacciones por rango de fechas (DESDE - HASTA)
     const transaccionesFiltradas = useMemo(() => {
-        if (!fechaFiltro) return transacciones
-        const fechaLimite = new Date(fechaFiltro)
-        fechaLimite.setHours(23, 59, 59, 999)
-        return transacciones.filter(t => new Date(t.date) <= fechaLimite)
-    }, [transacciones, fechaFiltro])
+        if (!fechaDesde || !fechaHasta) return transacciones
+        const desde = new Date(fechaDesde)
+        const hasta = new Date(fechaHasta)
+        hasta.setHours(23, 59, 59, 999)
+        return transacciones.filter(t => {
+            const fechaTransaccion = new Date(t.date)
+            return fechaTransaccion >= desde && fechaTransaccion <= hasta
+        })
+    }, [transacciones, fechaDesde, fechaHasta])
 
     const totales = useMemo(() => {
         const ingresos = transaccionesFiltradas.filter(t => t.type === 'INGRESO').reduce((sum, t) => sum + t.value, 0)
@@ -154,7 +166,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles, prime
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-            {/* Navbar */}
+            {/* Navbar (sin cambios) */}
             <nav className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-20 items-center">
@@ -230,23 +242,36 @@ export default function DashboardClient({ transacciones, mesesDisponibles, prime
                     <p className="text-gray-600 mt-1">Aquí tienes un resumen de tus finanzas</p>
                 </div>
 
-                {/* Selector de fecha */}
+                {/* 🔥 FILTRO DESDE - HASTA (MODIFICADO) 🔥 */}
                 <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between bg-white rounded-2xl shadow-md p-6">
                     <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4 md:mb-0">
                         Mi tablero de control
                     </h2>
-                    <div className="flex items-center space-x-3">
-                        <label htmlFor="fecha" className="text-gray-700 font-medium">📅 Desde:</label>
-                        <input
-                            type="date"
-                            id="fecha"
-                            value={fechaFiltro}
-                            onChange={(e) => setFechaFiltro(e.target.value)}
-                            className="w-48 md:w-64 px-4 py-2.5 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700 font-medium"
-                        />
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                        <div className="flex items-center space-x-2">
+                            <label htmlFor="fechaDesde" className="text-gray-700 font-medium">📅 Desde:</label>
+                            <input
+                                type="date"
+                                id="fechaDesde"
+                                value={fechaDesde}
+                                onChange={(e) => setFechaDesde(e.target.value)}
+                                className="w-48 px-4 py-2.5 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700 font-medium"
+                            />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <label htmlFor="fechaHasta" className="text-gray-700 font-medium">📅 Hasta:</label>
+                            <input
+                                type="date"
+                                id="fechaHasta"
+                                value={fechaHasta}
+                                onChange={(e) => setFechaHasta(e.target.value)}
+                                className="w-48 px-4 py-2.5 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700 font-medium"
+                            />
+                        </div>
                     </div>
                 </div>
 
+                {/* Resto del contenido (sin cambios, igual a tu código original) */}
                 {/* Tarjetas resumen */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div className="bg-gradient-to-br from-[#10B981] to-[#059669] rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-transform duration-300">
@@ -347,7 +372,7 @@ export default function DashboardClient({ transacciones, mesesDisponibles, prime
                     </div>
                 </div>
 
-                {/* Detalle de transacciones - CORREGIDO PARA MÓVIL */}
+                {/* Detalle de transacciones */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Detalle Ingresos */}
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
